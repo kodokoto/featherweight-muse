@@ -1,8 +1,10 @@
-struct Variable {
-    name: String,
+#[derive(Debug)]
+pub struct Variable {
+    pub name: String,
 }
 
-enum Term {
+#[derive(Debug)]
+pub enum Term {
     Variable(Variable),
     Value(Value),
     Move {
@@ -12,31 +14,37 @@ enum Term {
         var: Variable,
     },
     Box {
-        t: Term,
+        t: Box<Term>,
     },
     Ref {
         mutable: bool, 
-        t: Term,
+        t: Box<Term>,
     },
     Let {
         mutable: bool,
         var: Variable,
-        t: Term,
+        t: Box<Term>,
     },
     Assign {
         var: Variable,
-        t: Term,
+        t: Box<Term>,
     },
 }
 
-
-enum Value
+#[derive(Debug)]
+pub enum Value
 {
     NumericLiteral(i64),
     Reference(String)
 }
 
-struct Program {
-    terms: Vec<Term>,
+#[derive(Debug)]
+pub struct Program {
+    pub terms: Vec<Term>,
+}
+
+#[derive(Debug)]
+pub enum AST {
+    Program(Program),
 }
 
