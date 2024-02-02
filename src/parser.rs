@@ -144,7 +144,7 @@ impl Parser {
         }
     }
 
-    pub fn parse(&mut self) -> AST {
+    pub fn parse(&mut self) -> Program {
         let mut terms = Vec::new();
         loop {
             let term = self.parse_term();
@@ -153,9 +153,9 @@ impl Parser {
                 break;
             }
         }
-        AST::Program(Program {
+        Program {
             terms
-        })
+        }
     }
 
     pub fn new(tokens: Vec<Token>) -> Parser {
