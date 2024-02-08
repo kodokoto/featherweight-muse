@@ -27,7 +27,17 @@ fn main() {
     let mut interpreter = interpreter::Interpreter::new();
     for t in ast.terms {
         let res = interpreter.run(t);
-        println!("{:?}", res);
+        match res {
+            Ok(v) => match v {
+                ast::Value::Epsilon => {},
+                _ => println!("{:?}", v)
+                
+            },
+            Err(e) => {
+                println!("ERROR: {}", e);
+                break;
+            }
+        }
     }
 }
 
