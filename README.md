@@ -1,6 +1,14 @@
 # Featherweight muse
 
-An implamentation of a featherweight muse compiler written in Rust.
+An implementation of a featherweight muse compiler written in Rust.
+
+## Pre-requisites
+- [Rust](https://doc.rust-lang.org/cargo/getting-started/installation.html)
+
+## Install
+```bash
+cargo install
+```
 
 ## Usage
 
