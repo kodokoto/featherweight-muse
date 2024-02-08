@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env};
+use std::env;
 
 mod lexer;
 mod token;
@@ -8,35 +8,59 @@ mod state;
 mod interpreter;
 
 fn main() {
-    env::set_var("RUST_BACKTRACE", "1");
 
     // take first arg as file dir
     let args: Vec<String> = std::env::args().collect();
-    let file_dir = &args[1];
+
+    if args.len() < 2 {
+        panic!("No file provided");
+    }
+
+    if args[1] == "-h" || args[1] == "--help" {
+        println!("Usage: ./main [options] <file>");
+        println!("Options:");
+        println!("\t-v, -verbose\t\tEnable verbose mode");
+        println!("\t-d, -debug\t\tEnable debug mode");
+        return;
+    }
+
+    for arg in &args {
+        match arg.as_str() {
+            "-v" | "-verbose" => {
+                env::set_var("RUST_BACKTRACE", "1");
+            },
+            "-d" | "-debug" => {
+                env::set_var("MUSE_DEBUG", "1");
+            },
+            _ => {}
+        }
+    }
+
+    let file_dir = &args[args.len() -1];
     let file_contents = std::fs::read_to_string(file_dir).expect("Error reading file");
     let mut lexer = lexer::Lexer::new(&file_contents);
     let tokens = lexer.tokenize();
-    println!("{:?}", tokens);
+    if env::var("MUSE_DEBUG").is_ok() {
+        println!("{:?}", tokens);
+    }
 
     let mut parser = parser::Parser::new(tokens);
     let ast = parser.parse();
-    println!("{:#?}", ast);
 
-    // let mut reducer = reduction::Reducer::new();
-    // reducer.r_program(&ast);
+    if env::var("MUSE_DEBUG").is_ok() {
+        println!("{:#?}", ast);
+    }
+
     let mut interpreter = interpreter::Interpreter::new();
-    for t in ast.terms {
-        let res = interpreter.run(t);
-        match res {
-            Ok(v) => match v {
-                ast::Value::Epsilon => {},
-                _ => println!("{:?}", v)
-                
-            },
-            Err(e) => {
-                println!("ERROR: {}", e);
-                break;
-            }
+    let res = interpreter.run(ast);
+    match res {
+        Ok(v) => match v {
+            ast::Value::Epsilon => {},
+            _ => println!("{:?}", v)
+            
+        },
+        Err(e) => {
+            println!("ERROR: {}", e);
         }
     }
 }

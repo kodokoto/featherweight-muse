@@ -5,7 +5,7 @@ use crate::state::{State, insert, read, drop, write};
 pub type Reference = String;
 
 pub trait AST {
-    fn execute(&self, s: State) -> Result<(State, Term), String>;
+    fn execute(&mut self, s: State) -> Result<(State, Self), String> where Self: Sized;
 }
 
 #[derive(Debug, Clone)]
@@ -25,9 +25,21 @@ impl Display for Value {
     }
 }
 
-#[derive(Debug)]
+impl AST for Value {
+    fn execute(&mut self, s: State) -> Result<(State, Value), String> {
+        return Ok((s, self.clone()))
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct Variable {
     pub name: String,
+}
+
+impl AST for Variable {
+    fn execute(&mut self, s: State) -> Result<(State, Variable), String> {
+        return Ok((s, self.clone()))
+    }
 }
 
 #[derive(Debug)]
@@ -35,7 +47,19 @@ pub struct Program {
     pub terms: Vec<Term>,
 }
 
-#[derive(Debug)]
+impl AST for Program {
+    fn execute(&mut self, s: State) -> Result<(State, Program), String> {
+        let state = s;
+        let (s, t) = match self.terms.remove(0).execute(state) {
+            Ok((s, t)) => (s, t),
+            Err(e) => return Err(e)
+        };
+        let mut terms = self.terms.clone();
+        return Ok((s, Program { terms }))
+    }
+}
+
+#[derive(Debug, Clone)]
 pub enum Term {
     Variable(Variable),
     Value(Value),
@@ -64,9 +88,9 @@ pub enum Term {
 }
 
 impl AST for Term {
-    fn execute<'a>(&self, mut s: State) -> Result<(State, Term), String> {
+    fn execute(&mut self, s: State) -> Result<(State, Term), String> {
         match self {
-            Term::Let { mutable, variable, term } => {
+            Term::Let { variable, term, .. } => {
                 let (mut s2, t) = match term.execute(s) {
                     Ok((s2, t)) => (s2, t),
                     Err(e) => return Err(e)
@@ -82,7 +106,7 @@ impl AST for Term {
                 return Ok((s3, Term::Value(Value::Epsilon)))
             }
             Term::Assign { variable, term } => {
-                let (mut s2, t) = match term.execute(s) {
+                let (s2, t) = match term.execute(s) {
                     Ok((s2, t)) => (s2, t),
                     Err(e) => return Err(e)
                 };
@@ -130,7 +154,7 @@ impl AST for Term {
                 let s3 = insert(s2, reference.clone(), &value);
                 return Ok((s3, Term::Value(Value::Reference(reference))))
             }
-            Term::Ref { mutable, term } => {
+            Term::Ref { mutable: _, term } => {
                 let (mut s2, t) = match term.execute(s) {
                     Ok((s2, t)) => (s2, t),
                     Err(e) => return Err(e)

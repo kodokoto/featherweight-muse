@@ -1,4 +1,6 @@
-use crate::{ast::{Term, Value, AST}, state::State};
+use std::env;
+
+use crate::{ast::{Program, Term, Value, AST}, state::State};
 
 pub struct Interpreter {
     state: State,
@@ -11,17 +13,17 @@ impl Interpreter {
         }
     }
 
-    pub fn run(&mut self, ast: impl AST) -> Result<Value, String> {
-        let (s, t) = match ast.execute(self.state.clone()) {
-            Ok((s, t)) => (s, t),
-            Err(e) => return Err(e)
-        };
-        self.state = s;
-        println!("State: {:?}", self.state);
-        let v = match t {
-            Term::Value(v) => v,
-            _ => Value::Epsilon
-        };
-        return Ok(v.clone());
+    pub fn run(&mut self, mut ast: Program) -> Result<Value, String> {
+        while ast.terms.len() > 0 {
+            let (s, t) = match ast.execute(self.state.clone()) {
+                Ok((s, t)) => (s, t),
+                Err(e) => return Err(e)
+            };
+            self.state = s;
+            if env::var("MUSE_DEBUG").is_ok() {
+                println!("{:?}", self.state);
+            }
+        }
+        return Ok(Value::Epsilon)
     }
 }
