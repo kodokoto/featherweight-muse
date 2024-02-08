@@ -11,14 +11,17 @@ impl Interpreter {
         }
     }
 
-    pub fn run(&mut self, ast: impl AST) -> Value {
-        let (s, t) = ast.execute(self.state.clone());
+    pub fn run(&mut self, ast: impl AST) -> Result<Value, String> {
+        let (s, t) = match ast.execute(self.state.clone()) {
+            Ok((s, t)) => (s, t),
+            Err(e) => return Err(e)
+        };
         self.state = s;
         println!("State: {:?}", self.state);
         let v = match t {
             Term::Value(v) => v,
             _ => Value::Epsilon
         };
-        return v.clone();
+        return Ok(v.clone());
     }
 }

@@ -5,7 +5,7 @@ use crate::state::{State, insert, read, drop, write};
 pub type Reference = String;
 
 pub trait AST {
-    fn execute(&self, s: State) -> (State, Term);
+    fn execute(&self, s: State) -> Result<(State, Term), String>;
 }
 
 #[derive(Debug, Clone)]
@@ -64,74 +64,94 @@ pub enum Term {
 }
 
 impl AST for Term {
-    fn execute<'a>(&self, mut s: State) -> (State, Term) {
+    fn execute<'a>(&self, mut s: State) -> Result<(State, Term), String> {
         match self {
             Term::Let { mutable, variable, term } => {
-                let (mut s2, t) = term.execute(s);
-                
+                let (mut s2, t) = match term.execute(s) {
+                    Ok((s2, t)) => (s2, t),
+                    Err(e) => return Err(e)
+                };
+
                 let value = match t {
                     Term::Value(v) => v,
-                    _ => panic!("Invalid term")
+                    _ => panic!("Invalid term, this should not happen")
                 };
+
                 let reference = s2.create_reference_from_variable(&variable);
                 let s3 = insert(s2, reference, &value);
-                return (s3, Term::Value(Value::Epsilon))
+                return Ok((s3, Term::Value(Value::Epsilon)))
             }
             Term::Assign { variable, term } => {
-                let (s2, t) = term.execute(s);
+                let (mut s2, t) = match term.execute(s) {
+                    Ok((s2, t)) => (s2, t),
+                    Err(e) => return Err(e)
+                };
+
                 let value = match t {
                     Term::Value(v) => v,
-                    _ => panic!("Invalid term")
+                    _ => panic!("Invalid term, this should not happen")
                 };
-                let s3 = drop(s2, &variable);
+                let Some(s3) = drop(s2, &variable) else {
+                    return Err(format!("Variable: {} not found", variable.name));
+                };
                 let Some(s4) = write(s3, &variable, &value) else {
-                    panic!("Variable: {} not found", variable.name);
+                    return Err(format!("Variable: {} not found", variable.name));
                 };
-                return (s4, Term::Value(Value::Epsilon))
+                return Ok((s4, Term::Value(Value::Epsilon)))
             }
             Term::Move { variable } => {
                 let Some(value) = read(&s, &variable) else {
-                    panic!("Variable: {} not found", variable.name);
+                    return Err(format!("Variable: {} not found", variable.name));
                 };
 
-                let s2 = drop(s, &variable);
-                return (s2, Term::Value(value))
+                let Some(s2) = drop(s, &variable) else {
+                    return Err(format!("Variable: {} not found", variable.name));
+                };
+                return Ok((s2, Term::Value(value)))
             }
             Term::Copy { variable } => {
                 let Some(value) = read(&s, &variable) else {
-                    panic!("Variable: {} not found", variable.name);
+                    return Err(format!("Variable: {} not found", variable.name));
                 };
 
-                return (s, Term::Value(value))
+                return Ok((s, Term::Value(value)))
             }
             Term::Box { term } => {
-                let (mut s2, t) = term.execute(s);
+                let (mut s2, t) = match term.execute(s) {
+                    Ok((s2, t)) => (s2, t),
+                    Err(e) => return Err(e)
+                };
+
                 let value = match t {
                     Term::Value(v) => v,
                     _ => panic!("Invalid term")
                 };
                 let reference = s2.create_reference_from_value(&value);
                 let s3 = insert(s2, reference.clone(), &value);
-                return (s3, Term::Value(Value::Reference(reference)))
+                return Ok((s3, Term::Value(Value::Reference(reference))))
             }
             Term::Ref { mutable, term } => {
-                let (mut s2, t) = term.execute(s);
+                let (mut s2, t) = match term.execute(s) {
+                    Ok((s2, t)) => (s2, t),
+                    Err(e) => return Err(e)
+                };
+
                 let value = match t {
                     Term::Value(v) => v,
                     _ => panic!("Invalid term")
                 };
                 let reference = s2.create_reference_from_value(&value);
                 let s3 = insert(s2, reference.clone(), &value);
-                return (s3, Term::Value(Value::Reference(reference)))
+                return Ok((s3, Term::Value(Value::Reference(reference))))
             }
             Term::Variable(var) => {
                 let Some(value) = read(&s, &var) else {
                     panic!("Variable: {} not found", var.name)
                 };
-                return (s, Term::Value(value))
+                return Ok((s, Term::Value(value)))
             }
             Term::Value(val) => {
-                return (s, Term::Value(val.clone()))
+                return Ok((s, Term::Value(val.clone())))
             }
         }
     }

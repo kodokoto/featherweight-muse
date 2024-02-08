@@ -74,14 +74,14 @@ pub fn insert(mut s: State, reference: Reference, value: &Value) -> State {
     return s
 }
 
-pub fn drop<'a>(mut s: State, variable: &Variable) -> State {
+pub fn drop<'a>(mut s: State, variable: &Variable) -> Option<State> {
     let reference = loc(&s, variable);
     match reference {
         Some(reference) => {
             s.state.remove(&reference);
             s.locations.remove(&variable.name);
-            return s
+            return Some(s)
         },
-        None => panic!("Variable: {} not found", variable.name)
+        None => None
     }
 }

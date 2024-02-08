@@ -4,7 +4,6 @@ mod lexer;
 mod token;
 mod parser;
 mod ast;
-mod reduction;
 mod state;
 mod interpreter;
 
@@ -32,21 +31,3 @@ fn main() {
     }
 }
 
-
- fn test_hashmap() {
-    let mut map = HashMap::new();
-    map.insert("foo", 42);
-    map.insert("bar", 1337);
-
-
-    let foo = map.get("foo");
-    println!("{:?}", foo);
-    let bar = map.get("bar");
-    println!("{:?}", bar);
-    let baz = map.get("baz");
-    println!("{:?}", baz);
-
-    map.insert("foo", 69);
-
-    println!("{:?}", map.get("foo"));
- }
