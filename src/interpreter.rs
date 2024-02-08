@@ -21,7 +21,7 @@ impl Interpreter {
             };
             self.state = s;
             if env::var("MUSE_DEBUG").is_ok() {
-                println!("{:?}", self.state);
+                println!("{:#?}", self.state);
             }
         }
         return Ok(Value::Epsilon)

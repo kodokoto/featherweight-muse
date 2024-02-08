@@ -78,9 +78,9 @@ impl Parser {
                             self.parse_assignment()
                         } else {
                             self.current_position += 1;
-                            Term::Variable(Variable {
-                                name: s.to_string()
-                            })
+                            Term::Variable(
+                                s.to_string()
+                            )
                         }
                     },
                     Token::Move => {
@@ -133,9 +133,7 @@ impl Parser {
                 match token {
                     Token::Identifier(s) => {
                         self.current_position += 1;
-                        Variable {
-                            name: s.to_string()
-                        }
+                        s.to_string()
                     },
                     _ => panic!("Invalid token: {:?}, expected variable", token)
                 }
