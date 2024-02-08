@@ -44,23 +44,23 @@ impl Parser {
     fn parse_let(&mut self) -> Term {
         self.check_consume(Token::Let);
         let mutable = self.check_if_mut();
-        let var = self.parse_variable();
+        let variable = self.parse_variable();
         self.check_consume(Token::Assign);
-        let t = self.parse_term();
+        let term = self.parse_term();
         Term::Let {
             mutable,
-            var,
-            t: Box::new(t)
+            variable,
+            term: Box::new(term)
         }
     }
 
     fn parse_assignment(&mut self) -> Term {
-        let var = self.parse_variable();
+        let variable = self.parse_variable();
         self.check_consume(Token::Assign);
-        let t = self.parse_term();
+        let term = self.parse_term();
         Term::Assign {
-            var,
-            t: Box::new(t)
+            variable,
+            term: Box::new(term)
         }
     }
 
@@ -86,19 +86,19 @@ impl Parser {
                     Token::Move => {
                         self.current_position += 1;
                         Term::Move {
-                            var: self.parse_variable()
+                            variable: self.parse_variable()
                         }
                     },
                     Token::Copy => {
                         self.current_position += 1;
                         Term::Copy {
-                            var: self.parse_variable()
+                            variable: self.parse_variable()
                         }
                     },
                     Token::Box => {
                         self.current_position += 1;
                         Term::Box {
-                            t: Box::new(self.parse_term())
+                            term: Box::new(self.parse_term())
                         }
                     },
                     Token::Mut => {
@@ -107,14 +107,14 @@ impl Parser {
                         self.check_consume(Token::Ref);
                         Term::Ref {
                             mutable: true,
-                            t: Box::new(self.parse_term())
+                            term: Box::new(self.parse_term())
                         }
                     },
                     Token::Ref => {
                         self.current_position += 1;
                         Term::Ref {
                             mutable: false,
-                            t: Box::new(self.parse_term())
+                            term: Box::new(self.parse_term())
                         }
                     },
                     Token::Let => {

@@ -5,6 +5,8 @@ mod token;
 mod parser;
 mod ast;
 mod reduction;
+mod state;
+mod interpreter;
 
 fn main() {
     env::set_var("RUST_BACKTRACE", "1");
@@ -21,9 +23,13 @@ fn main() {
     let ast = parser.parse();
     println!("{:#?}", ast);
 
-    let mut reducer = reduction::Reducer::new();
-    reducer.r_program(&ast);
-    
+    // let mut reducer = reduction::Reducer::new();
+    // reducer.r_program(&ast);
+    let mut interpreter = interpreter::Interpreter::new();
+    for t in ast.terms {
+        let res = interpreter.run(t);
+        println!("{:?}", res);
+    }
 }
 
 

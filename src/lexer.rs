@@ -1,4 +1,3 @@
-use std::{fmt::Error, io::ErrorKind};
 
 use crate::token::Token;
 pub struct Lexer {
