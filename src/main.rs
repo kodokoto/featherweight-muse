@@ -65,7 +65,7 @@ fn main() {
         Ok(_) => {},
         Err(e) => {
             println!("TYPE ERROR: {}", e);
-            return;
+            // return;
         }
     };
     let res = interpreter.run(ast);
