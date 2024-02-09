@@ -1,4 +1,3 @@
-
 use crate::token::Token;
 pub struct Lexer {
     input: Vec<String>,

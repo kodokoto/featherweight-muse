@@ -1,5 +1,5 @@
 use crate::token::Token;
-use crate::ast::{Term, Value, Variable, Program, AST};
+use crate::ast::{Term, Value, Variable, Program};
 
 pub struct Parser
 {

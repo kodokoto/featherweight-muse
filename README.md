@@ -13,7 +13,17 @@ cargo install
 ## Usage
 
 ```bash
-cargo run <file>
+cargo run <options> <file>
+```
+
+### Options
+```
+Options:
+        -h, -help       Display this message
+        -l, -lex        Enable lexer output
+        -p, -parse      Enable parser output
+        -t, -typecheck  Enable typecheck output
+        -e, -eval       Enable eval output
 ```
 
 ## Example

@@ -1,6 +1,6 @@
 use std::env;
 
-use ast::AST;
+use typecheck::TypeCheck;
 use typing::TypeEnviroment;
 
 mod lexer;
@@ -10,9 +10,12 @@ mod ast;
 mod state;
 mod interpreter;
 mod typing;
+mod reduction;
+mod typecheck;
 
 fn main() {
 
+    env::set_var("RUST_BACKTRACE", "1");
     // take first arg as file dir
     let args: Vec<String> = std::env::args().collect();
 
@@ -23,18 +26,27 @@ fn main() {
     if args[1] == "-h" || args[1] == "--help" {
         println!("Usage: ./main [options] <file>");
         println!("Options:");
-        println!("\t-v, -verbose\t\tEnable verbose mode");
-        println!("\t-d, -debug\t\tEnable debug mode");
+        println!("\t-h, -help\tDisplay this message");
+        println!("\t-l, -lex\tEnable lexer output");
+        println!("\t-p, -parse\tEnable parser output");
+        println!("\t-t, -typecheck\tEnable typecheck output");
+        println!("\t-e, -eval\tEnable eval output");
         return;
     }
 
     for arg in &args {
         match arg.as_str() {
-            "-v" | "-verbose" => {
-                env::set_var("RUST_BACKTRACE", "1");
+            "-l" | "-lex" => {
+                env::set_var("LEX_OUT", "1");
             },
-            "-d" | "-debug" => {
-                env::set_var("MUSE_DEBUG", "1");
+            "-p" | "-parse" => {
+                env::set_var("PARSE_OUT", "1");
+            },
+            "-t" | "-typecheck" => {
+                env::set_var("TYPE_OUT", "1");
+            },
+            "-e" | "-eval" => {
+                env::set_var("EVAL_OUT", "1");
             },
             _ => {}
         }
@@ -47,7 +59,7 @@ fn main() {
     // tokenize
     let mut lexer = lexer::Lexer::new(&file_contents);
     let tokens = lexer.tokenize();
-    if env::var("MUSE_DEBUG").is_ok() {
+    if env::var("LEX_OUT").is_ok() {
         println!("{:?}", tokens);
     }
 
@@ -55,7 +67,7 @@ fn main() {
     let mut parser = parser::Parser::new(tokens);
     let ast = parser.parse();
 
-    if env::var("MUSE_DEBUG").is_ok() {
+    if env::var("PARSE_OUT").is_ok() {
         println!("{:#?}", ast);
     }
 
