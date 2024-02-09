@@ -1,4 +1,4 @@
-use std::{collections::HashMap};
+use std::collections::HashMap;
 
 use crate::ast::{Reference, Value, Variable};
 
@@ -98,7 +98,7 @@ pub fn read(s: &State, variable: &Variable) -> Result<Value, String>
     }
 }
 
-pub fn write(mut s: State, variable: &Variable, value: &Value) -> Result<State, String> {
+pub fn write(s: State, variable: &Variable, value: &Value) -> Result<State, String> {
     
     // where loc(S, w) = ℓw and S(ℓw) = ⟨·⟩m
     let Some(r) = loc(&s, variable) else {
@@ -137,12 +137,12 @@ pub fn drop(mut s: State, value: &Value) -> State {
         Value::Reference(r @ Reference { location, owned }) => {
             // if owned, recursively drop the value
             if *owned {
-                let v = s.state.remove(r);
-                drop(s, value)
+                let v = s.state.remove(r).unwrap();
+                drop(s, &v)
             } else {
                 s.state.remove(r);
                 s.locations.remove(location);
-                return s
+                s
             }
         },
         _ => s

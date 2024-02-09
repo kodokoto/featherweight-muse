@@ -15,7 +15,7 @@ impl Interpreter {
 
     pub fn run(&mut self, mut ast: Program) -> Result<Value, String> {
         while ast.terms.len() > 0 {
-            let (s, t) = match ast.evaluate(self.state.clone()) {
+            let (s, _) = match ast.evaluate(self.state.clone()) {
                 Ok((s, t)) => (s, t),
                 Err(e) => return Err(e)
             };

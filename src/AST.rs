@@ -1,4 +1,4 @@
-use std::{fmt::Display};
+use std::fmt::Display;
 
 use crate::{reduction::Evaluate, typecheck::TypeCheck};
 

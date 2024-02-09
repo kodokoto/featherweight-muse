@@ -19,11 +19,11 @@ impl Evaluate for Variable {
 impl Evaluate for Program {
     fn evaluate(&mut self, s: State) -> Result<(State, Program), String> {
         let state = s;
-        let (s, t) = match self.terms.remove(0).evaluate(state) {
+        let (s, _) = match self.terms.remove(0).evaluate(state) {
             Ok((s, t)) => (s, t),
             Err(e) => return Err(e)
         };
-        let mut terms = self.terms.clone();
+        let terms = self.terms.clone();
         return Ok((s, Program { terms }))
     }
 }
@@ -97,7 +97,6 @@ impl Evaluate for Term {
                 };
                 // read(S, w) = ⟨v⟩
                 let Some(reference) = loc(&s, &variable) else {
-                    panic!("Variable: {} not found", variable);
                     return Err(format!("Variable: {} not found", variable));
                 };
                 return Ok((s, Term::Value(Value::Reference(reference))))

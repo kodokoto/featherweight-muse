@@ -79,7 +79,7 @@ impl TypeCheck for Term {
                     kind: Box::new(t)
                 }))
             },
-            Term::Let { mutable, variable, term } => {
+            Term::Let { variable, term, .. } => {
                 if dom(&gamma).contains(&variable) {
                     return Err(format!("Error type-checking let declaration:  variable{} already exists", variable))
                 };
