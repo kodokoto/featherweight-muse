@@ -35,8 +35,48 @@ impl Display for Value {
     }
 }
 
-pub type Variable = String;
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Path {
+    pub selectors: Vec<PathSelector>
+}
 
+type PathSelector = i32;
+
+// pub type Variable = String;
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Variable {
+    pub name: String,
+    pub path: Path
+}
+
+impl Variable {
+    pub fn traverse(&self, p: Path, i: usize) -> Variable {
+        let p1 = p.selectors;
+        let p2 = &self.path.selectors;
+
+        if p2.len() == i {
+            return self.clone()
+        } else {
+            let n = p1.len();
+            let m = p2.len();
+            let mut nelements: Vec<PathSelector> = Vec::with_capacity(n + m);
+
+// Extend nelements with elements from path_elements
+            nelements.extend_from_slice(&p1[0..n]);
+
+            // Extend nelements with elements from p_elements starting at index i
+            nelements.extend_from_slice(&p2[i..i + m]);
+
+            return Variable {
+                name: self.name.clone(),
+                path: Path {
+                    selectors: nelements
+                }
+            }
+
+        }
+    }
+}
 
 
 #[derive(Debug)]
@@ -61,7 +101,7 @@ pub enum Term {
     },
     Ref {
         mutable: bool, 
-        term: Box<Term>,
+        var: Variable,
     },
     Let {
         mutable: bool,
@@ -72,6 +112,10 @@ pub enum Term {
         variable: Variable,
         term: Box<Term>,
     },
+    // Block {
+    //     terms: Vec<Term>,
+    //     lifetime: String
+    // }
 }
 
 

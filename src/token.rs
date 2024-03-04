@@ -9,5 +9,7 @@ pub enum Token {
     Let,
     Mut,
     Assign,
+    // LBrace,
+    // RBrace,
     EOF
 }

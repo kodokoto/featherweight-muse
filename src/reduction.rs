@@ -37,9 +37,14 @@ impl Evaluate for Term {
                     Err(e) => return Err(e)
                 };
 
+
+
                 let value = match t {
                     Term::Value(v) => v,
-                    _ => panic!("Invalid term, this should not happen")
+                    _ => {
+                        println!("{:?}", t);
+                        panic!("Invalid term, this should not happen")
+                    }
                 };
 
                 let reference = s2.create_variable_reference(&variable);
@@ -89,15 +94,11 @@ impl Evaluate for Term {
                 return Ok((s3, Term::Value(Value::Reference(reference))))
             }
 
-            Term::Ref { mutable: _, term } => {
+            Term::Ref { mutable: _, var } => {
                 // check that term is a variable
-                let variable = match *term.clone() {
-                    Term::Variable(v) => v,
-                    _ => panic!("Invalid term")
-                };
                 // read(S, w) = ⟨v⟩
-                let Some(reference) = loc(&s, &variable) else {
-                    return Err(format!("Variable: {} not found", variable));
+                let Some(reference) = loc(&s, &var) else {
+                    return Err(format!("Variable: {:?} not found", var));
                 };
                 return Ok((s, Term::Value(Value::Reference(reference))))
             }

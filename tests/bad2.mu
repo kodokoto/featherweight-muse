@@ -1,3 +1,3 @@
 let mut x = 0
-let mut y = mut ref x
+let mut y = move x
 x = 1

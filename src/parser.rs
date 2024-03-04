@@ -1,5 +1,5 @@
 use crate::token::Token;
-use crate::ast::{Term, Value, Variable, Program};
+use crate::ast::{Term, Value, Variable, Program, Path};
 
 pub struct Parser
 {
@@ -79,7 +79,12 @@ impl Parser {
                         } else {
                             self.current_position += 1;
                             Term::Variable(
-                                s.to_string()
+                                Variable {
+                                    name: s.to_string(),
+                                    path: Path {
+                                        selectors: Vec::new()
+                                    }
+                                }
                             )
                         }
                     },
@@ -107,14 +112,14 @@ impl Parser {
                         self.check_consume(Token::Ref);
                         Term::Ref {
                             mutable: true,
-                            term: Box::new(self.parse_term())
+                            var: self.parse_variable()
                         }
                     },
                     Token::Ref => {
                         self.current_position += 1;
                         Term::Ref {
                             mutable: false,
-                            term: Box::new(self.parse_term())
+                            var: self.parse_variable()
                         }
                     },
                     Token::Let => {
@@ -133,7 +138,12 @@ impl Parser {
                 match token {
                     Token::Identifier(s) => {
                         self.current_position += 1;
-                        s.to_string()
+                        Variable {
+                            name: s.to_string(),
+                            path: Path {
+                                selectors: Vec::new()
+                            }
+                        }
                     },
                     _ => panic!("Invalid token: {:?}, expected variable", token)
                 }

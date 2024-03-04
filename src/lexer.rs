@@ -24,6 +24,8 @@ impl Lexer {
                     "let" => Token::Let,
                     "mut" => Token::Mut,
                     "=" => Token::Assign,
+                    // "{" => Token::LBrace,
+                    // "}" => Token::RBrace,
                     _ => {
                         if token.chars().all(char::is_numeric) {
                             Token::NumericLiteral(token.parse::<i64>().unwrap())

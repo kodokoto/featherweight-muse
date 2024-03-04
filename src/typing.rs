@@ -1,37 +1,90 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Weak};
 
-use crate::ast::Variable;
+use crate::ast::{Path, Variable};
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum Type {
-    Numeric,
-    Epsilon,
-    Box(Box<Type>),
-    Reference { 
-        kind: Box<Type>,
-        mutable: bool,
-    },
-    Undefined(Box<Type>), // internal use only
+
+
+pub trait Type where Self: Sized {
+    fn copyable(&self) -> bool;
+    fn prohibits_reading(&self, variable: Variable) -> bool;
+    fn prohibits_writing(&self, variable: Variable) -> bool;
 }
 
-impl Type {
-    pub fn is_copy_type(&self) -> bool {
+#[derive(Debug, Clone, PartialEq)]
+pub enum AtomicType {
+    Numeric,
+    Epsilon,
+    Box(Box<AtomicType>),
+    Reference { 
+        var: Variable,
+        mutable: bool,
+    }
+}
+
+impl Type for AtomicType {
+    fn copyable(&self) -> bool {
         match self {
-            Type::Reference { mutable, .. } => {
-                return !mutable;
-            },
-            Type::Box(_) => {
-                return false;
-            },
-            _ => return true
+            AtomicType::Reference { mutable, .. } => !mutable,
+            AtomicType::Box(_) => false,
+            _ => true
         }
     }
 
+    fn prohibits_reading(&self, variable: Variable) -> bool {
+        match self {
+            AtomicType::Reference { mutable, var} => if *mutable { self.prohibits_writing(variable) } else { false },
+            AtomicType::Box(t) => t.prohibits_reading(variable),
+            _ => false
+        }
+    }
+
+    fn prohibits_writing(&self, variable: Variable) -> bool {
+        return match self {
+            AtomicType::Reference{ mutable, var } => {
+                var.name == variable.name && var.path == variable.path && !mutable
+            }
+            AtomicType::Box(t) => t.prohibits_writing(variable),
+            _ => false
+        }
+    }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum PartialType {
+    Undefined(AtomicType),
+    Defined(AtomicType),
+    Box(Box<PartialType>),
+}
 
+impl Type for PartialType {
+    fn copyable(&self) -> bool {
+        match self {
+            PartialType::Box(pt) => pt.copyable(),
+            PartialType::Defined(t) => t.copyable(),
+            _ => false
+        }
+    }
+
+    fn prohibits_reading(&self, variable: Variable) -> bool {
+        match self {
+            PartialType::Box(pt) => pt.prohibits_reading(variable),
+            PartialType::Defined(t) => t.prohibits_reading(variable),
+            _ => false
+        }
+    }
+
+    fn prohibits_writing(&self, variable: Variable) -> bool {
+        match self {
+            PartialType::Box(pt) => pt.prohibits_writing(variable),
+            PartialType::Defined(t) => t.prohibits_writing(variable),
+            _ => false
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct TypeEnviroment {
-    gamma: HashMap<String, Type>,
+    gamma: HashMap<String, PartialType>,
 }
 
 impl TypeEnviroment {
@@ -41,64 +94,137 @@ impl TypeEnviroment {
         }
     }
 
-    pub fn get_partial(&self, key: &String) -> Result<Type, String> {
+    pub fn get_partial(&self, key: &String) -> Result<PartialType, String> {
         return match self.gamma.get(key) {
             Some(t) => Ok(t.clone()),
             None => Err(format!("Type not found for variable: {}", key))
         }
     }
 
-    pub fn get(&self, key: &String) -> Result<Type, String> {
-        return match self.get_partial(key)? {
-            Type::Undefined(_) => Err(format!("Error: Undefined type for variable: {}", key)),
-            t => Ok(t)
+    pub fn get_atomic(&self, partial: &PartialType) -> Result<AtomicType, String> {
+        return match partial {
+            PartialType::Undefined(t) => Err(format!("Type is undefined")),
+            PartialType::Defined(t) => Ok(t.clone()),
+            PartialType::Box(pt) => {
+                // recursively get the type of the box
+                self.get_atomic(&pt)
+            }
         }
     }
 
-    pub fn insert(&mut self, key: String, value: Type) {
+    pub fn get(&self, key: &String) -> Result<AtomicType, String> {
+        let pt = self.get_partial(key)?;
+        return self.get_atomic(&pt);
+    }
+
+    pub fn insert(&mut self, key: String, value: PartialType) {
         self.gamma.insert(key, value);
     }
 }
 
-// true if the type of the variable is a reference that is mutable
-pub fn read_prohibited(gamma: &TypeEnviroment, variable: &String) -> Result<bool, String> {
-    match gamma.get(variable)? {
-        Type::Reference { mutable, .. } => {
-            return Ok(mutable);
-        },
-        _ => return Ok(false)        
+pub fn contains(gamma: &TypeEnviroment, pt: PartialType, t: AtomicType) -> bool {
+    match pt {
+        PartialType::Box(ptp) => contains(gamma, *ptp, t),
+        PartialType::Defined(t1) => t1 == t,
+        _ => false
     }
 }
 
-pub fn write_prohibited(gamma: &TypeEnviroment, variable: &String) -> Result<bool, String> {
-    match gamma.get(variable)? {
-        Type::Reference { mutable, .. } => {
-            return Ok(!mutable);
-        },
-        _ => return Ok(false)
+pub fn read_prohibited(gamma: &TypeEnviroment, variable: Variable) -> bool {
+    // for each type in the type environment
+    for (var, t) in gamma.gamma.iter() {
+        if t.prohibits_reading(variable.clone()) {
+            return true;
+        }
     }
+    return false;
 }
 
-pub fn move_type(mut gamma: TypeEnviroment, variable: &Variable) -> Result<TypeEnviroment, String> {
-    let t = gamma.get(&variable)?;
-    gamma.insert(variable.clone(), Type::Undefined(Box::new(t.clone())));
-    return Ok(gamma);
+pub fn write_prohibited(gamma: &TypeEnviroment, variable: Variable) -> bool {
+    // for each type in the type environment
+    for (var, t) in gamma.gamma.iter() {
+        if t.prohibits_writing(variable.clone()) {
+            return true;
+        }
+    }
+    return false;
 }
 
 pub fn dom(gamma: &TypeEnviroment) -> Vec<String> {
     return gamma.gamma.keys().map(|s| s.clone()).collect();
 }
 
-pub fn shape_compatible(t1: &Type, t2: &Type) -> bool {
+pub fn shape_compatible(gamma: &TypeEnviroment, t1: &PartialType, t2: &PartialType) -> bool {
     match (t1, t2) {
-        (Type::Numeric, Type::Numeric) => true,
-        (Type::Epsilon, Type::Epsilon) => true,
-        (Type::Box(t1), Type::Box(t2)) => shape_compatible(t1, t2),
-        (Type::Reference { kind: t1, mutable: m1 }, Type::Reference { kind: t2, mutable: m2 }) => {
-            shape_compatible(t1, t2) && m1 == m2
+        (PartialType::Defined(AtomicType::Numeric), PartialType::Defined(AtomicType::Numeric)) => true,
+        (PartialType::Box(bt1), PartialType::Box(bt2)) => shape_compatible(gamma, bt1, bt2),
+        (PartialType::Box(t1), PartialType::Box(t2)) => shape_compatible(gamma, t1, t2),
+        (PartialType::Defined(AtomicType::Reference { mutable: m1, .. }), PartialType::Defined(AtomicType::Reference { mutable: m2, .. })) => {
+            m1 == m2
         },
-        (Type::Undefined(t1), t2) => shape_compatible(t1, t2),
-        (t1, Type::Undefined(t2)) => shape_compatible(t1, t2),
+        (PartialType::Undefined(nt1), t2) => shape_compatible(gamma, &PartialType::Defined(nt1.clone()), t2),
+        (t1, PartialType::Undefined(nt2)) => shape_compatible(gamma, t1, &PartialType::Defined(nt2.clone())),
         _ => false
     }
+}
+
+pub fn move_var(gamma: TypeEnviroment, variable: &Variable) -> Result<TypeEnviroment, String> {
+    let t1 = gamma.get(&variable.name)?;
+    let t2 = strike(t1, variable.path.clone(), 0)?;
+    let mut gamma2 = gamma.clone();
+    gamma2.insert(variable.name.clone(), t2);
+    return Ok(gamma2);
+}
+
+pub fn strike(t: AtomicType, p: Path, i: usize) -> Result<PartialType, String> {
+    if p.selectors.len() == i {
+        return Ok(PartialType::Undefined(t));
+    } else {
+        match t {
+            AtomicType::Box(pt) => {
+                let pt2 = strike(*pt, p, i + 1)?;
+                return Ok(PartialType::Box(Box::new(pt2)));
+            },
+            _ => {
+                panic!("This should not happen, cannot move through borrow");
+            }
+        }
+    }
+}
+
+
+pub fn update(gamma: TypeEnviroment, t1: PartialType, p: Path, i: usize, t2: AtomicType, strong: bool) -> Result<(TypeEnviroment, PartialType), String> {
+    if i == p.selectors.len() {
+        return Ok((gamma, PartialType::Defined(t2)));
+    } else {
+        match t1.clone() {
+            PartialType::Box(t) => {
+                let (gamma2, t3) = update(gamma, *t, p, i + 1, t2, strong)?;
+                return Ok((gamma2, PartialType::Box(Box::new(t3))));
+            },
+            PartialType::Defined(AtomicType::Reference { var, mutable }) => {
+                if !mutable {
+                    return Err(format!("Error updating reference: variable {:?} is not mutable", var));
+                }
+
+                let v = var.traverse(p, i+1);
+                let g3 = write(gamma, v, t2);
+                return Ok((g3?, t1));
+            },
+            _ => {
+                panic!("This should not happen");
+            }
+        }
+    }
+}
+
+pub fn write(gamma: TypeEnviroment, variable: Variable, t1: AtomicType) -> Result<TypeEnviroment, String> {
+    let p: Path = variable.path;
+
+    let t2 = gamma.get(&variable.name)?;
+
+    let (mut gamma2, t3) = update(gamma, PartialType::Defined(t1), p, 0, t2, true)?;
+
+    gamma2.insert(variable.name, t3);
+    return Ok(gamma2);
 }
