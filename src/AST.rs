@@ -61,7 +61,7 @@ impl Variable {
             let m = p2.len();
             let mut nelements: Vec<PathSelector> = Vec::with_capacity(n + m);
 
-// Extend nelements with elements from path_elements
+            // Extend nelements with elements from path_elements
             nelements.extend_from_slice(&p1[0..n]);
 
             // Extend nelements with elements from p_elements starting at index i
@@ -112,10 +112,6 @@ pub enum Term {
         variable: Variable,
         term: Box<Term>,
     },
-    // Block {
-    //     terms: Vec<Term>,
-    //     lifetime: String
-    // }
 }
 
 

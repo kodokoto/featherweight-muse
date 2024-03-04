@@ -2,8 +2,6 @@ use std::{collections::HashMap, rc::Weak};
 
 use crate::ast::{Path, Variable};
 
-
-
 pub trait Type where Self: Sized {
     fn copyable(&self) -> bool;
     fn prohibits_reading(&self, variable: Variable) -> bool;
