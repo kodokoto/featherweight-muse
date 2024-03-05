@@ -41,6 +41,12 @@ impl TypeCheck for Program {
 impl TypeCheck for Term {
     fn type_check(&self, gamma: TypeEnviroment) -> Result<(TypeEnviroment, AtomicType), String> {
         match self {
+            Term::FunctionCall { .. } => {
+                return Err("Function calls are not supported".to_string())
+            },
+            Term::FunctionDeclaration { name, args, body, ty } => {
+                return Err("Function declarations are not supported".to_string())
+            },
             Term::Variable(var) => {
                 let (g, t) = var.type_check(gamma)?;
                 return Ok((g, t))

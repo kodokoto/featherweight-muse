@@ -9,6 +9,13 @@ pub enum Token {
     Let,
     Mut,
     Assign,
+    Fn,
+    LParen,
+    RParen,
+    LCurl,
+    RCurl,
+    Comma,
+    Colon,
     // LBrace,
     // RBrace,
     EOF

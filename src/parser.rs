@@ -1,5 +1,7 @@
+
 use crate::token::Token;
-use crate::ast::{Term, Value, Variable, Program, Path};
+use crate::ast::{Argument, Declaration, Path, Program, Term, Value, Variable};
+use crate::typing::AtomicType;
 
 pub struct Parser
 {
@@ -64,10 +66,154 @@ impl Parser {
         }
     }
 
+    fn parse_function_declaration(&mut self) -> Term {
+        self.check_consume(Token::Fn);
+        // expect identifier
+
+        let name: String = match self.tokens.get(self.current_position) {
+            Some(Token::Identifier(s)) => {
+                self.current_position += 1;
+                s.to_string()
+            },
+            _ => panic!("Expected identifier")
+        };
+
+        self.check_consume(Token::LParen);
+        let args = self.parse_args();
+        self.check_consume(Token::RParen);
+
+        let ty = match self.tokens.get(self.current_position) {
+            Some(Token::Colon) => {
+                self.current_position += 1;
+                Some(self.parse_type())
+            },
+            _ => None
+        };
+
+        self.check_consume(Token::LCurl);
+
+        let mut body = Vec::new();
+        loop {
+            let term = self.parse_term();
+            body.push(term);
+            if self.tokens.get(self.current_position) == Some(&Token::RCurl) {
+                break;
+            }
+            if self.tokens.get(self.current_position) == None {
+                break;
+            }
+        }
+
+        self.check_consume(Token::RCurl);
+
+        Term::FunctionDeclaration {
+            name,
+            args,
+            body,
+            ty
+        }
+    }
+
+    fn parse_type(&mut self) -> AtomicType {
+        match self.tokens.get(self.current_position) {
+            Some(Token::Identifier(s)) => {
+                self.current_position += 1;
+                match s.as_str() {
+                    "int" => AtomicType::Numeric,
+                    _ => panic!("Expected int type")
+                }
+            },
+            Some(Token::Box) => {
+                self.current_position += 1;
+                AtomicType::Box(Box::new(self.parse_type()))
+            },
+            _ => panic!("Expected type")
+        }
+    }
+
+    fn parse_args(&mut self) -> Vec<Argument> {
+        let mut args = Vec::new();
+        loop {
+            match self.tokens.get(self.current_position) {
+                Some(Token::RParen) => {
+                    break;
+                },
+                Some(Token::Comma) => {
+                    self.current_position += 1;
+                },
+                Some(Token::Identifier(s)) => {
+                    self.current_position += 1;
+                    let name = s.to_string();
+                    self.check_consume(Token::Colon);
+                    let ty = self.parse_type();
+                    args.push(Argument {
+                        name,
+                        mutable: false,
+                        ty
+                    });
+                },
+                Some(Token::Mut) => {
+                    self.current_position += 1;
+                    let name = match self.tokens.get(self.current_position) {
+                        Some(Token::Identifier(s)) => {
+                            self.current_position += 1;
+                            s.to_string()
+                        },
+                        _ => panic!("Expected identifier")
+                    };
+                    self.check_consume(Token::Colon);
+                    let ty = self.parse_type();
+                    args.push(Argument {
+                        name,
+                        mutable: true,
+                        ty
+                    });
+                },
+                _ => panic!("Expected identifier or comma")
+            }
+        }
+        args
+    }
+
+    fn parse_function_call(&mut self) -> Term {
+        let name = match self.tokens.get(self.current_position) {
+            Some(Token::Identifier(s)) => {
+                self.current_position += 1;
+                s.to_string()
+            },
+            _ => panic!("Expected identifier")
+        };
+        self.check_consume(Token::LParen);
+    
+        let mut params = Vec::new();
+        loop {
+            match self.tokens.get(self.current_position) {
+                Some(Token::RParen) => {
+                    break;
+                },
+                Some(Token::Comma) => {
+                    self.current_position += 1;
+                },
+                _ => {
+                    let term = self.parse_term();
+                    params.push(term);
+                }
+            }
+        }
+        self.check_consume(Token::RParen);
+        Term::FunctionCall {
+            name,
+            params
+        }
+    }
+
     fn parse_term(&mut self) -> Term {
         match self.tokens.get(self.current_position) {
             Some(token) => {
                 match token {
+                    Token::Fn => {
+                        self.parse_function_declaration()
+                    },
                     Token::NumericLiteral(n) => {
                         self.current_position += 1;
                         Term::Value(Value::NumericLiteral(*n))
@@ -76,6 +222,8 @@ impl Parser {
                         // check if assignment
                         if self.tokens.get(self.current_position + 1) == Some(&Token::Assign) {
                             self.parse_assignment()
+                        } else if self.tokens.get(self.current_position + 1) == Some(&Token::LParen) {
+                            self.parse_function_call()
                         } else {
                             self.current_position += 1;
                             Term::Variable(
@@ -154,7 +302,12 @@ impl Parser {
 
     pub fn parse(&mut self) -> Program {
         let mut terms = Vec::new();
+        // let mut declarations = Vec::new();
         loop {
+            // if (self.tokens.get(self.current_position) == Some(&Token::Fn)) {
+            //     let declaration = self.parse_function_declaration();
+            //     declarations.push(declaration);
+            // }
             let term = self.parse_term();
             terms.push(term);
             if self.tokens.get(self.current_position) == None {
@@ -162,7 +315,8 @@ impl Parser {
             }
         }
         Program {
-            terms
+            terms,
+            // declarations
         }
     }
 

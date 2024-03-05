@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::{reduction::Evaluate, typecheck::TypeCheck};
+use crate::{reduction::Evaluate, typecheck::TypeCheck, typing::AtomicType};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Reference {
@@ -82,8 +82,24 @@ impl Variable {
 #[derive(Debug)]
 pub struct Program {
     pub terms: Vec<Term>,
+    // pub declarations: Vec<Declaration>
 }
 
+
+#[derive(Debug, Clone)]
+pub enum Declaration {
+    Function {
+        name: String,
+        args: Vec<Argument>,
+        body: Vec<Term>,
+        ty: Option<AtomicType>
+    },
+    Let {
+        mutable: bool,
+        variable: Variable,
+        term: Box<Term>,
+    },
+}
 
 
 #[derive(Debug, Clone)]
@@ -112,6 +128,31 @@ pub enum Term {
         variable: Variable,
         term: Box<Term>,
     },
+    FunctionCall {
+        name: String,
+        params: Vec<Term>
+    },
+    FunctionDeclaration {
+        name: String,
+        args: Vec<Argument>,
+        body: Vec<Term>,
+        ty: Option<AtomicType>
+    },
+}
+
+#[derive(Debug, Clone)]
+pub struct Argument {
+    pub name: String,
+    pub ty: AtomicType,
+    pub mutable: bool
+}
+
+
+pub struct FunctionDeclaration {
+    name: String,
+    args: Vec<Argument>,
+    body: Vec<Term>,
+    ty: Option<AtomicType>
 }
 
 

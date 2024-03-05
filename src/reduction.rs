@@ -1,4 +1,4 @@
-use crate::{ast::{Program, Term, Value, Variable}, state::{loc, write, drop, insert, read, State}};
+use crate::{ast::{Declaration, Path, Program, Term, Value, Variable}, state::{add_function, drop, insert, loc, push, read, write, State}};
 
 pub trait Evaluate {
     fn evaluate(&mut self, s: State) -> Result<(State, Self), String> where Self: Sized;
@@ -16,6 +16,8 @@ impl Evaluate for Variable {
     }
 }
 
+
+
 impl Evaluate for Program {
     fn evaluate(&mut self, s: State) -> Result<(State, Program), String> {
         let state = s;
@@ -24,24 +26,82 @@ impl Evaluate for Program {
             Err(e) => return Err(e)
         };
         let terms = self.terms.clone();
-        return Ok((s, Program { terms }))
+        return Ok((s, Program { 
+            terms 
+        }))
     }
 }
 
 impl Evaluate for Term {
     fn evaluate(&mut self, s: State) -> Result<(State, Term), String> {
         match self {
+            Term::FunctionCall { name, params } => {
+                let (args, body, ty) = match s.functions.get(name) {
+                    Some((args, body, ty)) => (args, body, ty),
+                    None => return Err(format!("Function: {:?} not found", name))
+                };
+                let s2 = push(s.clone());
+
+                if args.len() != params.len() {
+                    return Err(format!("Function: {:?} expected {:?} arguments, got {:?} arguments", name, args.len(), params.len()))
+                }
+
+                let mut s3 = s2.clone();
+
+                // for each argument in the function, 
+                for (arg, param) in args.iter().zip(params.iter()) {
+                    let (mut s2, t) = match param.clone().evaluate(s3) {
+                        Ok((s2, t)) => (s2, t),
+                        Err(e) => return Err(e)
+                    };
+                    let value = match t {
+                        Term::Value(v) => v,
+                        _ => panic!("Invalid term, this should not happen")
+                    };
+                    let reference = s2.create_variable_reference(&Variable { name: arg.name.clone(), path: Path { selectors: vec![] }});
+                    s3 = insert(s2, reference, &value);
+                }
+
+                let mut t1: Term = Term::Value(Value::Epsilon);
+
+                // evaluate the body of the function
+                for term in body {
+                    let (s4, t2) = match term.clone().evaluate(s3) {
+                        Ok((s4, t2)) => (s4, t2),
+                        Err(e) => return Err(e)
+                    };
+                    s3 = s4;
+                    t1 = t2;
+                }
+                s3.pop();
+
+                match t1 {
+                    Term::Value(v) => {
+                        return Ok((s3, Term::Value(v)))
+                    },
+                    _ => {
+                        return Ok((s3, Term::Value(Value::Epsilon)))
+                    }
+                }
+            }
+            Term::FunctionDeclaration { name, args, body, ty } => {
+                let s2 = add_function(s, name.to_string(), args.clone(), body.clone(), ty.clone());
+                return Ok((s2, Term::Value(Value::Epsilon)));
+            }
             Term::Let { variable, term, .. } => {
+                println!("Reducing let {:?} = {:?}", variable, term);
+
                 let (mut s2, t) = match term.evaluate(s) {
                     Ok((s2, t)) => (s2, t),
                     Err(e) => return Err(e)
                 };
 
-
+                
 
                 let value = match t {
                     Term::Value(v) => v,
                     _ => {
+                        println!("Oh no!");
                         println!("{:?}", t);
                         panic!("Invalid term, this should not happen")
                     }

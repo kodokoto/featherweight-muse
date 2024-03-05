@@ -31,3 +31,12 @@ Options:
 ```bash
 cargo run tests/test.mu
 ```
+
+## Syntax
+```rust
+fn test(mut ref x: int, y: int) -> int {
+    x = 5;
+    y = 10;
+    return x + y;
+}
+```
