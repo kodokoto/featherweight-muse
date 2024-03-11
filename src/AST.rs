@@ -144,7 +144,8 @@ pub enum Term {
 pub struct Argument {
     pub name: String,
     pub ty: AtomicType,
-    pub mutable: bool
+    pub mutable: bool,
+    pub reference: bool
 }
 
 

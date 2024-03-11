@@ -13,7 +13,18 @@ mod typing;
 mod reduction;
 mod typecheck;
 
+fn t(mut x: Box<i32>) -> Box<i32> {
+    x = Box::new(2);
+    return x
+}
+
 fn main() {
+
+    // let x = Box::new(1);
+    // let p = t(x);
+    // println!("{:?}", p);
+
+    // return;
 
     env::set_var("RUST_BACKTRACE", "1");
     // take first arg as file dir
@@ -76,8 +87,9 @@ fn main() {
     match ast.type_check(TypeEnviroment::new()){
         Ok(_) => {},
         Err(e) => {
-            println!("TYPE ERROR: {}", e);
-            // return;
+            print!("TYPE ERROR: {}", e);
+            return;
+            // panic!("Type error")
         }
     };
     let res = interpreter.run(ast);

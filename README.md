@@ -39,4 +39,15 @@ fn test(mut ref x: int, y: int) -> int {
     y = 10;
     return x + y;
 }
+
+
+fn test(x: int) {
+    // x is a copy
+    let y = x;
+}
+
+fn test2(ref x: int) {
+    // x is a reference
+    let y = x; // y 
+}
 ```

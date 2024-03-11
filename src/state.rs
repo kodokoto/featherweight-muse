@@ -22,7 +22,7 @@ impl State {
                 state: HashMap::new(),
                 locations: HashMap::new()
             }],
-            heap_ref_counter: 1,
+            heap_ref_counter: 0,
             functions: HashMap::new()
         }
     }
@@ -60,11 +60,8 @@ impl State {
         return &mut self.stack[length - 1]
     }
 
-    pub fn push(&mut self) {
-        self.stack.push(Enviroment {
-            state: HashMap::new(),
-            locations: HashMap::new()
-        });
+    pub fn push(&mut self, env: Enviroment) {
+        self.stack.push(env);
     }
 
     pub fn pop(&mut self) {
@@ -73,11 +70,9 @@ impl State {
 }
 
 
-pub fn push(mut s: State) -> State {
-    s.push();
-    return s
-}
+
 // Helper functions
+
 
 pub fn add_function(mut s: State, name: String, args: Vec<Argument>, body: Vec<Term>, ty: Option<AtomicType>) -> State {
     s.functions.insert(name, (args, body, ty));
@@ -96,13 +91,13 @@ pub fn read(mut s: &State, variable: &Variable) -> Result<Value, String>
 {
     // where loc(S, w) = ℓw
     let Some(reference) = loc(&mut s, variable) else {
-        return Err(format!("Error reading from program state: Variable {:?} does not exist in state", variable))
+        return panic!("{}", format!("Error reading from program state: {:?} does not exist in {:#?}", variable.name, s.top()))
     };
     
     // S(ℓw)
     match s.top().state.get(&reference) {
         Some(value) => Ok(value.clone()),
-        None => Err(format!("Error reading from program state: Variable {:?} does not exist in state", variable))
+        None => panic!("{}", format!("Error reading from program state: {:?} does not exist in {:#?}", variable.name, s.top()))
     }
 }
 
@@ -124,7 +119,9 @@ pub fn write(mut s: State, variable: &Variable, value: &Value) -> Result<State, 
 
 pub fn insert(mut s: State, reference: Reference, value: &Value) -> State {
     // S [ℓw ↦ → ⟨v⊥⟩m]
+    println!("Inserting {:?} into state {:?}", value, s.top().state);
     s.top_mut().state.insert(reference, value.clone());
+    println!("State: {:#?}", s.top().state);
     return s
 }
 
@@ -144,3 +141,4 @@ pub fn drop(mut s: State, value: &Value) -> State {
         _ => s
     }
 }
+

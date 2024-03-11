@@ -16,6 +16,10 @@ pub enum AtomicType {
     Reference { 
         var: Variable,
         mutable: bool,
+    },
+    Function { 
+        args: Vec<AtomicType>,
+        ret: Option<Box<AtomicType>>
     }
 }
 
@@ -95,13 +99,13 @@ impl TypeEnviroment {
     pub fn get_partial(&self, key: &String) -> Result<PartialType, String> {
         return match self.gamma.get(key) {
             Some(t) => Ok(t.clone()),
-            None => Err(format!("Type not found for variable: {}", key))
+            None => panic!("Type not found")
         }
     }
 
     pub fn get_atomic(&self, partial: &PartialType) -> Result<AtomicType, String> {
         return match partial {
-            PartialType::Undefined(t) => Err(format!("Type is undefined")),
+            PartialType::Undefined(t) => Err(format!("Type of {:?} is undefined, chances are it was moved", t)),
             PartialType::Defined(t) => Ok(t.clone()),
             PartialType::Box(pt) => {
                 // recursively get the type of the box
@@ -155,7 +159,7 @@ pub fn dom(gamma: &TypeEnviroment) -> Vec<String> {
 pub fn shape_compatible(gamma: &TypeEnviroment, t1: &PartialType, t2: &PartialType) -> bool {
     match (t1, t2) {
         (PartialType::Defined(AtomicType::Numeric), PartialType::Defined(AtomicType::Numeric)) => true,
-        (PartialType::Box(bt1), PartialType::Box(bt2)) => shape_compatible(gamma, bt1, bt2),
+        (PartialType::Defined(AtomicType::Box(bt1)), PartialType::Defined(AtomicType::Box(bt2))) => shape_compatible(gamma, &PartialType::Defined(*bt1.clone()), &PartialType::Defined(*bt2.clone())),
         (PartialType::Box(t1), PartialType::Box(t2)) => shape_compatible(gamma, t1, t2),
         (PartialType::Defined(AtomicType::Reference { mutable: m1, .. }), PartialType::Defined(AtomicType::Reference { mutable: m2, .. })) => {
             m1 == m2

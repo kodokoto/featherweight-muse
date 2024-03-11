@@ -45,12 +45,13 @@ impl Parser {
 
     fn parse_let(&mut self) -> Term {
         self.check_consume(Token::Let);
-        let mutable = self.check_if_mut();
+        // let mutable = self.check_if_mut(); all variables are mut for now
+        self.check_consume(Token::Mut);
         let variable = self.parse_variable();
         self.check_consume(Token::Assign);
         let term = self.parse_term();
         Term::Let {
-            mutable,
+            mutable: true,
             variable,
             term: Box::new(term)
         }
@@ -149,10 +150,11 @@ impl Parser {
                     args.push(Argument {
                         name,
                         mutable: false,
+                        reference: false,
                         ty
                     });
                 },
-                Some(Token::Mut) => {
+                Some(Token::Ref) => {
                     self.current_position += 1;
                     let name = match self.tokens.get(self.current_position) {
                         Some(Token::Identifier(s)) => {
@@ -165,7 +167,33 @@ impl Parser {
                     let ty = self.parse_type();
                     args.push(Argument {
                         name,
+                        mutable: false,
+                        reference: true,
+                        ty
+                    });
+                },
+                Some(Token::Mut) => {
+                    self.current_position += 1;
+                    let reference = match self.tokens.get(self.current_position) {
+                        Some(Token::Ref) => {
+                            self.current_position += 1;
+                            true
+                        },
+                        _ => false
+                    };
+                    let name = match self.tokens.get(self.current_position) {
+                        Some(Token::Identifier(s)) => {
+                            self.current_position += 1;
+                            s.to_string()
+                        },
+                        _ => panic!("Expected identifier")
+                    };
+                    self.check_consume(Token::Colon);
+                    let ty = self.parse_type();
+                    args.push(Argument {
+                        name,
                         mutable: true,
+                        reference,
                         ty
                     });
                 },
