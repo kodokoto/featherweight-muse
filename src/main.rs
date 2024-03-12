@@ -13,9 +13,13 @@ mod typing;
 mod reduction;
 mod typecheck;
 
-fn t(mut x: Box<i32>) -> Box<i32> {
-    x = Box::new(2);
+fn t() -> Box<i32> {
+    let x = Box::new(2);
     return x
+}
+
+fn t2() {
+    let p = t();
 }
 
 fn main() {

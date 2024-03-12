@@ -5,6 +5,7 @@ use crate::{reduction::Evaluate, typecheck::TypeCheck, typing::AtomicType};
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Reference {
     pub location: String,
+    pub path : Vec<usize>,
     pub owned: bool  // owned references are dropped recursively
 }
 
