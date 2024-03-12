@@ -13,20 +13,24 @@ mod typing;
 mod reduction;
 mod typecheck;
 
-fn t() -> Box<i32> {
-    let x = Box::new(2);
-    return x
+fn t(x: &mut i32) {
+    let z = x;
 }
 
-fn t2() {
-    let p = t();
-}
+
 
 fn main() {
+    // let mut x = 1;
 
-    // let x = Box::new(1);
-    // let p = t(x);
-    // println!("{:?}", p);
+    // t(&mut x);
+
+    // x = 3;
+
+
+    
+    // // let x = Box::new(1);
+    // // let p = t(x);
+    // // println!("{:?}", p);
 
     // return;
 
@@ -80,7 +84,7 @@ fn main() {
 
     // parse
     let mut parser = parser::Parser::new(tokens);
-    let ast = parser.parse();
+    let mut ast = parser.parse();
 
     if env::var("PARSE_OUT").is_ok() {
         println!("{:#?}", ast);

@@ -1,3 +1,3 @@
 let mut x = box 5
-let mut y = move x
-let mut z = move y
+let mut y = x
+let mut z = y

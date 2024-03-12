@@ -17,8 +17,8 @@ impl Lexer {
         match self.input.get(self.current_position) {
             Some(token) => {
                 match token.as_str() {
-                    "move" => Token::Move,
-                    "copy" => Token::Copy,
+                    // "move" => Token::Move,
+                    // "copy" => Token::Copy,
                     "box" => Token::Box,
                     "ref" => Token::Ref,
                     "let" => Token::Let,

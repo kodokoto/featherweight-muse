@@ -1,7 +1,7 @@
 fn test ( y : box int ) : box int {
-    y = box 6
-    move y
+    y
 }
+
 let mut x = box 5
-let mut p = test ( move x )
+let mut p = test ( x )
 

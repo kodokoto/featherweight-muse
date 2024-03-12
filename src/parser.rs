@@ -259,23 +259,24 @@ impl Parser {
                                     name: s.to_string(),
                                     path: Path {
                                         selectors: Vec::new()
-                                    }
+                                    },
+                                    copyable: None
                                 }
                             )
                         }
                     },
-                    Token::Move => {
-                        self.current_position += 1;
-                        Term::Move {
-                            variable: self.parse_variable()
-                        }
-                    },
-                    Token::Copy => {
-                        self.current_position += 1;
-                        Term::Copy {
-                            variable: self.parse_variable()
-                        }
-                    },
+                    // Token::Move => {
+                    //     self.current_position += 1;
+                    //     Term::Move {
+                    //         variable: self.parse_variable()
+                    //     }
+                    // },
+                    // Token::Copy => {
+                    //     self.current_position += 1;
+                    //     Term::Copy {
+                    //         variable: self.parse_variable()
+                    //     }
+                    // },
                     Token::Box => {
                         self.current_position += 1;
                         Term::Box {
@@ -318,7 +319,8 @@ impl Parser {
                             name: s.to_string(),
                             path: Path {
                                 selectors: Vec::new()
-                            }
+                            },
+                            copyable: None
                         }
                     },
                     _ => panic!("Invalid token: {:?}, expected variable", token)

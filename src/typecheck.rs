@@ -2,11 +2,11 @@
 use crate::{ast::{Argument, Path, Program, Term, Value, Variable}, typing::{dom, move_var, read_prohibited, shape_compatible, write, write_prohibited, AtomicType, PartialType, Type, TypeEnviroment}};
 
 pub trait TypeCheck {
-    fn type_check(&self, gamma: TypeEnviroment) -> Result<(TypeEnviroment, AtomicType), String>;
+    fn type_check(&mut self, gamma: TypeEnviroment) -> Result<(TypeEnviroment, AtomicType), String>;
 }
 
 impl TypeCheck for Value {
-    fn type_check(&self, gamma: TypeEnviroment) -> Result<(TypeEnviroment, AtomicType), String> {
+    fn type_check(&mut self, gamma: TypeEnviroment) -> Result<(TypeEnviroment, AtomicType), String> {
         match self {
             Value::NumericLiteral(_) => return Ok((gamma, AtomicType::Numeric)),
             // Value::Reference() => return Ok((gamma, Type::Reference)),
@@ -17,7 +17,7 @@ impl TypeCheck for Value {
 }
 
 impl TypeCheck for Variable {
-    fn type_check(&self, gamma: TypeEnviroment) -> Result<(TypeEnviroment, AtomicType), String> {
+    fn type_check(&mut self, gamma: TypeEnviroment) -> Result<(TypeEnviroment, AtomicType), String> {
         let t = match gamma.get(&self.name) {
             Ok(t) => t,
             Err(e) => return Err(e)
@@ -27,10 +27,10 @@ impl TypeCheck for Variable {
 }
 
 impl TypeCheck for Program {
-    fn type_check(&self, gamma: TypeEnviroment) -> Result<(TypeEnviroment, AtomicType), String> {
+    fn type_check(&mut self, gamma: TypeEnviroment) -> Result<(TypeEnviroment, AtomicType), String> {
         let mut gamma = gamma;
         let mut t = AtomicType::Epsilon;
-        for term in &self.terms {
+        for term in &mut self.terms {
             let (g, ty) = term.type_check(gamma)?;
             gamma = g;
             t = ty;
@@ -40,7 +40,7 @@ impl TypeCheck for Program {
 }
 
 impl TypeCheck for Term {
-    fn type_check(&self, gamma: TypeEnviroment) -> Result<(TypeEnviroment, AtomicType), String> {
+    fn type_check(&mut self, gamma: TypeEnviroment) -> Result<(TypeEnviroment, AtomicType), String> {
         match self {
             Term::FunctionCall { name, params } => {
                 // get the function type from the type environment
@@ -50,7 +50,7 @@ impl TypeCheck for Term {
                             return Err(format!("Error type-checking function call:  function {:?} expected {:?} arguments, got {:?} arguments", name, args.len(), params.len()))
                         };
                         let mut g1 = gamma;
-                        for (arg, param) in args.iter().zip(params.iter()) {
+                        for (arg, param) in args.iter().zip(params.iter_mut()) {
                             let (g2, t) = param.type_check(g1)?;
                             if *arg != t {
                                 return Err(format!("Error type-checking function call:  function {:?} expected argument of type {:?}, got argument of type {:?}", name, arg, t))
@@ -91,8 +91,20 @@ impl TypeCheck for Term {
                         Argument { name, ty, mutable: true, reference: false } => {
                             g_block.insert(name.clone(), PartialType::Defined(ty.clone()));
                         },
-                        Argument { name, ty, mutable: false, reference: true } => {
-                            g_block.insert(name.clone(), PartialType::Defined(AtomicType::Reference { mutable: false, var: Variable { name: name.clone(), path: Path { selectors : vec![] } } }));
+                        Argument { name, ty, mutable, reference: true } => {
+                            g_block.insert(
+                                name.clone(), 
+                                PartialType::Defined(
+                                    AtomicType::Reference { 
+                                        mutable: mutable.clone(), 
+                                        var: Variable { 
+                                            name: name.clone(), 
+                                            path: Path { selectors : vec![] }, 
+                                            copyable: Some(ty.copyable()) 
+                                        } 
+                                    }
+                                )
+                            );
                         },
                         _ => return Err(format!("Error type-checking function declaration:  invalid argument declaration: {:?}", arg))
                     }
@@ -118,35 +130,39 @@ impl TypeCheck for Term {
 
                 return Ok((g2, t))
             },
-            Term::Variable(var) => {
+            Term::Variable(ref mut var) => {
                 let (g, t) = var.type_check(gamma)?;
-                
+                if t.copyable() {
+                    var.copyable = Some(true);
+                } else {
+                    var.copyable = Some(false);
+                }
                 return Ok((g, t))
             },
             Term::Value(val) => {
                 let (g, t) = val.type_check(gamma)?;
                 return Ok((g, t))
             },
-            Term::Move { variable } => {
-                let (g, t) = variable.type_check(gamma)?;
-                println!("Type checking move of variable: {:?} with type {:?}", variable, t);
-                if write_prohibited(&g, variable.clone()) {
-                    return Err(format!("Error type-checking Move, variable {:?} is not writable", variable))
-                };
-                let gamma2 = move_var(g, &variable)?;
-                println!("Move successfully completed, new type environment: {:?}", gamma2);
-                return Ok((gamma2, t))
-            },
-            Term::Copy { variable } => {
-                let t = gamma.get(&variable.name)?;
-                if !t.copyable() {
-                    return Err(format!("Variable: {:?} of type {:?} is not copyable", variable.name, t))
-                };
-                if read_prohibited(&gamma, variable.clone()) {
-                    return Err(format!("Variable: {:?} is not readable", variable))
-                };
-                return Ok((gamma, t.clone()))
-            },
+            // Term::Move { variable } => {
+            //     let (g, t) = variable.type_check(gamma)?;
+            //     println!("Type checking move of variable: {:?} with type {:?}", variable, t);
+            //     if write_prohibited(&g, variable.clone()) {
+            //         return Err(format!("Error type-checking Move, variable {:?} is not writable", variable))
+            //     };
+            //     let gamma2 = move_var(g, &variable)?;
+            //     println!("Move successfully completed, new type environment: {:?}", gamma2);
+            //     return Ok((gamma2, t))
+            // },
+            // Term::Copy { variable } => {
+            //     let t = gamma.get(&variable.name)?;
+            //     if !t.copyable() {
+            //         return Err(format!("Variable: {:?} of type {:?} is not copyable", variable.name, t))
+            //     };
+            //     if read_prohibited(&gamma, variable.clone()) {
+            //         return Err(format!("Variable: {:?} is not readable", variable))
+            //     };
+            //     return Ok((gamma, t.clone()))
+            // },
             Term::Box { term } => {
                 let (g, t) = term.type_check(gamma)?;
                 return Ok((g, AtomicType::Box(Box::new(t))))
@@ -201,16 +217,11 @@ impl TypeCheck for Term {
                 if !shape_compatible(&g2, &t1, &PartialType::Defined(t2.clone())) {
                     return Err(format!("Error type-checking assignment:  types {:?} and {:?} are not compatible", t1, PartialType::Defined(t2.clone())))
                 };
-                let g3 = write(g2, variable.clone(), t2);
-                match g3 {
-                    Ok(g3) =>  {
-                        if write_prohibited(&g3, variable.clone()) {
-                            return Err(format!("Error type-checking assignment:  variable {:?} has been borrowed", variable.name))
-                        };
-                        return Ok((g3, AtomicType::Epsilon))        
-                    }
-                    Err(e) => return Err(format!("Error assigning variable {}, {}", variable.name, e))
+                let g3 = write(g2, variable.clone(), t2)?;
+                if write_prohibited(&g3, variable.clone()) {
+                    return Err(format!("Error type-checking assignment:  variable {:?} has been borrowed", variable.name))
                 };
+                return Ok((g3, AtomicType::Epsilon))        
             },
         }
     }

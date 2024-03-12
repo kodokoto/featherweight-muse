@@ -47,7 +47,8 @@ type PathSelector = i32;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Variable {
     pub name: String,
-    pub path: Path
+    pub path: Path,
+    pub copyable: Option<bool>
 }
 
 impl Variable {
@@ -72,7 +73,8 @@ impl Variable {
                 name: self.name.clone(),
                 path: Path {
                     selectors: nelements
-                }
+                },
+                copyable: self.copyable
             }
 
         }
@@ -107,12 +109,12 @@ pub enum Declaration {
 pub enum Term {
     Variable(Variable),
     Value(Value),
-    Move {
-        variable: Variable,
-    },
-    Copy {
-        variable: Variable,
-    },
+    // Move {
+    //     variable: Variable,
+    // },
+    // Copy {
+    //     variable: Variable,
+    // },
     Box {
         term: Box<Term>,
     },

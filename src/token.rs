@@ -2,8 +2,8 @@
 pub enum Token {
     NumericLiteral(i64),
     Identifier(String),
-    Move,
-    Copy,
+    // Move,
+    // Copy,
     Box,
     Ref,
     Let,
