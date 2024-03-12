@@ -92,7 +92,7 @@ fn main() {
 
     // interpret
     let mut interpreter = interpreter::Interpreter::new();
-    match ast.type_check(TypeEnviroment::new()){
+    match ast.type_check(TypeEnviroment::new(), 0){
         Ok(_) => {},
         Err(e) => {
             print!("TYPE ERROR: {}", e);
@@ -100,6 +100,8 @@ fn main() {
             // panic!("Type error")
         }
     };
+
+    // return;s
     let res = interpreter.run(ast);
 
     // print result

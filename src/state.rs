@@ -58,6 +58,7 @@ impl Heap {
         println!("Writing value: {:?} to location {:?}", value, reference.location);
         println!("Heap before write: {:?}", self.cells);
         let location = reference.location;
+        println!("Location: {:?}", location);
         self.cells.get_mut(&location).unwrap().value = value;
         println!("Heap after write: {:?}", self.cells);
         Ok(())

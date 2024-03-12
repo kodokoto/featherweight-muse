@@ -143,13 +143,23 @@ pub fn read_prohibited(gamma: &TypeEnviroment, variable: Variable) -> bool {
 }
 
 pub fn write_prohibited(gamma: &TypeEnviroment, variable: Variable) -> bool {
+
+    println!("Checking if writing is prohibited for {:?}", variable.name);
     // for each type in the type environment
     for (var, t) in gamma.gamma.iter() {
+
+        println!("Chcking if {:?} of type {:?} prohibits writing", var, t);
         if t.prohibits_writing(variable.clone()) {
             return true;
         }
     }
     return false;
+}
+
+pub fn t() {
+    let mut x = 0;
+    let mut y = &mut x;
+    x = 1;
 }
 
 pub fn dom(gamma: &TypeEnviroment) -> Vec<String> {
@@ -196,6 +206,9 @@ pub fn strike(t: AtomicType, p: Path, i: usize) -> Result<PartialType, String> {
 
 
 pub fn update(gamma: TypeEnviroment, t1: PartialType, p: Path, i: usize, t2: AtomicType, strong: bool) -> Result<(TypeEnviroment, PartialType), String> {
+
+    println!("Updating type {:?} with {:?} at {:?}", t1, t2, p);
+
     if i == p.selectors.len() {
         return Ok((gamma, PartialType::Defined(t2)));
     } else {
@@ -221,11 +234,18 @@ pub fn update(gamma: TypeEnviroment, t1: PartialType, p: Path, i: usize, t2: Ato
 }
 
 pub fn write(gamma: TypeEnviroment, variable: Variable, t1: AtomicType) -> Result<TypeEnviroment, String> {
+
+    println!("Writing type {:?} to {:?}", t1, variable.name);
+
     let p: Path = variable.path;
 
     let t2 = gamma.get(&variable.name)?;
 
-    let (mut gamma2, t3) = update(gamma, PartialType::Defined(t1), p, 0, t2, true)?;
+    println!("Type of {:?} is currently {:?}", variable.name, t2);
+
+    let (mut gamma2, t3) = update(gamma, PartialType::Defined(t2), p, 0, t1, true)?;
+
+    println!("Type of {:?} is now {:?}", variable.name, t3);
 
     gamma2.insert(variable.name, t3);
     return Ok(gamma2);

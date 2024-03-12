@@ -1,4 +1,4 @@
-use std::{collections::HashMap, os::macos::raw::stat};
+use std::{cell::Ref, collections::HashMap, os::macos::raw::stat};
 
 use crate::{ast::{Argument, Declaration, Path, Program, Reference, Term, Value, Variable}, state::{add_function, bind, drop, drop_lifetime, insert, loc, read, write, StackFrame, State}, typecheck::TypeCheck, typing::AtomicType};
 
@@ -239,9 +239,12 @@ impl Evaluate for Term {
                 println!("Binding variable: {:?} to reference: {:?}", variable.name, r);
                 // println!("{:#?}", s3.top());
                 let s4 = bind(s3, &variable.name, r);
+
+                println!("Heap after let: {:#?}", s4.heap);
                 return Ok((s4, Term::Value(Value::Epsilon)))
             }
             Term::Assign { variable, term } => {
+                println!("Reducing assignment of variable: {:?} with term: {:?}", variable.name, term);
                 let (s2, t) = match term.evaluate(s, lifetime) {
                     Ok((s2, t)) => (s2, t),
                     Err(e) => return Err(e)
@@ -252,7 +255,14 @@ impl Evaluate for Term {
                     _ => panic!("Invalid term, this should not happen")
                 };
                 let old_value = read(&s2, &variable)?;
+
+
+                println!("Dropping: {:?}", old_value);
+                println!("Heap before drop: {:#?}", s2.heap);
+
                 let s3 = drop(s2, &old_value);
+
+                println!("Heap after drop: {:#?}", s3.heap);
                 let s4 = write(s3, &variable, &value)?;
                 
                 return Ok((s4, Term::Value(Value::Epsilon)))
@@ -290,9 +300,10 @@ impl Evaluate for Term {
             Term::Ref { mutable: _, var } => {
                 // check that term is a variable
                 // read(S, w) = ⟨v⟩
-                let Ok(reference) = loc(&s, &var) else {
+                let Ok(mut reference) = loc(&s, &var) else {
                     return Err(format!("Variable: {:?} not found", var));
                 };
+                reference.owned = false;
                 return Ok((s, Term::Value(Value::Reference(reference))))
             }
 
