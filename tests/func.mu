@@ -1,4 +1,4 @@
-fn test ( y : box int ) : int {
+fn test ( y : box int ) : box int {
     y = box 6
     move y
 }

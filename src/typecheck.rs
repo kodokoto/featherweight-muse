@@ -106,6 +106,16 @@ impl TypeCheck for Term {
                     t = t3;
                 }
 
+                // check that the return type of the function matches the type of the body
+                match ty {
+                    Some(ty) => {
+                        if t != *ty {
+                            return Err(format!("Error type-checking function declaration:  function {:?} expected return type {:?}, got return type {:?}", name, ty, t))
+                        }
+                    },
+                    None => {}
+                }
+
                 return Ok((g2, t))
             },
             Term::Variable(var) => {
