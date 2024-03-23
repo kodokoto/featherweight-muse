@@ -13,8 +13,8 @@ mod typing;
 mod reduction;
 mod typecheck;
 
-fn main() {
 
+fn main() {
     env::set_var("RUST_BACKTRACE", "1");
     // take first arg as file dir
     let args: Vec<String> = std::env::args().collect();
@@ -65,7 +65,7 @@ fn main() {
 
     // parse
     let mut parser = parser::Parser::new(tokens);
-    let ast = parser.parse();
+    let mut ast = parser.parse();
 
     if env::var("PARSE_OUT").is_ok() {
         println!("{:#?}", ast);
@@ -73,13 +73,16 @@ fn main() {
 
     // interpret
     let mut interpreter = interpreter::Interpreter::new();
-    match ast.type_check(TypeEnviroment::new()){
+    match ast.type_check(TypeEnviroment::new(), 0){
         Ok(_) => {},
         Err(e) => {
-            println!("TYPE ERROR: {}", e);
-            // return;
+            print!("TYPE ERROR: {}", e);
+            return;
+            // panic!("Type error")
         }
     };
+
+    // return;s
     let res = interpreter.run(ast);
 
     // print result
