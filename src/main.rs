@@ -13,28 +13,8 @@ mod typing;
 mod reduction;
 mod typecheck;
 
-fn t(x: &mut i32) {
-    *x = 6;code 
-}
-
 
 fn main() {
-    // let mut x = 1;
-
-    // t(&mut x);
-
-    // print!("{}", x);
-
-    // // x = 3;
-
-
-    
-    // // // let x = Box::new(1);
-    // // // let p = t(x);
-    // // // println!("{:?}", p);
-
-    // return;
-
     env::set_var("RUST_BACKTRACE", "1");
     // take first arg as file dir
     let args: Vec<String> = std::env::args().collect();
