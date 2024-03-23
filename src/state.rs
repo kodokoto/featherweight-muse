@@ -1,11 +1,11 @@
-use std::{cell::Ref, collections::HashMap, hash::Hash, sync::atomic::{AtomicUsize, Ordering}};
+use std::{cell::Ref, collections::{btree_map::Values, HashMap}, hash::Hash, sync::atomic::{AtomicUsize, Ordering}};
 
-use crate::{ast::{Reference, Term, Value, Variable, Argument}, typing::AtomicType};
-
+use crate::{ast::{Reference, Term, Value, LVal, Argument}, typing::Type};
+type Location = String;
 #[derive(Debug, Clone)]
 pub struct StackFrame {
     pub locations: HashMap<String, Reference>,
-    pub functions: HashMap<String, (Vec<Argument>, Vec<Term>, Option<AtomicType>)>
+    pub functions: HashMap<String, (Vec<Argument>, Vec<Term>, Option<Type>)>
 }
 
 #[derive(Debug, Clone)]
@@ -15,17 +15,17 @@ pub struct Slot {
 }
 
 #[derive(Debug, Clone)]
-pub struct Heap {
-    pub cells: HashMap<String, Slot>,
+pub struct Store {
+    pub cells: HashMap<Location, Slot>,
 }
 
 static COUNTER : AtomicUsize = AtomicUsize::new(1);
 fn get_id() -> usize { COUNTER.fetch_add(1, Ordering::Relaxed) }
 
-impl Heap {
+impl Store {
 
-    pub fn new() -> Heap {
-        Heap {
+    pub fn new() -> Store {
+        Store {
             cells: HashMap::new()
         }
     }
@@ -48,19 +48,26 @@ impl Heap {
     }
 
     pub fn read(&self, reference: Reference) -> Result<Value, String> {
+        println!("READING value from location: {:?}", reference.location);
         let location = reference.location;
-        let value: Value = self.cells.get(&location).unwrap().value.clone();
+        let mut value: Value = self.cells.get(&location).unwrap().value.clone();
         // if value is a reference, recursively read from the heap
+        // value = match value.clone() {
+        //     Value::Reference(r) => {
+        //             self.read(r)?
+        //     },
+        //     _ => (value)
+        // };
         Ok(value)
     }
 
     pub fn write(&mut self, reference: Reference, value: Value) -> Result<(), String> {
         println!("Writing value: {:?} to location {:?}", value, reference.location);
-        println!("Heap before write: {:?}", self.cells);
+        println!("Heap before write: {:#?}", self.cells);
         let location = reference.location;
         println!("Location: {:?}", location);
         self.cells.get_mut(&location).unwrap().value = value;
-        println!("Heap after write: {:?}", self.cells);
+        println!("Heap after write: {:#?}", self.cells);
         Ok(())
     }
 
@@ -104,18 +111,22 @@ impl Heap {
         Ok(())
     }
 
+    pub fn get(&self, reference: Reference) -> Option<&Slot> {
+        self.cells.get(&reference.location)
+    }
+
 }
 
 #[derive(Debug, Clone)]
 
 pub struct State {
     pub stack: Vec<StackFrame>,
-    pub heap: Heap,
+    pub heap: Store,
 }
 
 
 impl State {
-    pub fn new(stack: Vec<StackFrame>, heap: Heap) -> State {
+    pub fn new(stack: Vec<StackFrame>, heap: Store) -> State {
         State {
             stack,
             heap
@@ -198,7 +209,7 @@ impl State {
         self.stack.pop();
     }
 
-    pub fn add_function(&mut self, name: String, args: Vec<Argument>, body: Vec<Term>, ty: Option<AtomicType>) {
+    pub fn add_function(&mut self, name: String, args: Vec<Argument>, body: Vec<Term>, ty: Option<Type>) {
         self.top_mut().functions.insert(name, (args, body, ty));
     }
 
@@ -209,22 +220,41 @@ impl State {
 // Helper functions
 
 
-pub fn add_function(mut s: State, name: String, args: Vec<Argument>, body: Vec<Term>, ty: Option<AtomicType>) -> State {
+pub fn add_function(mut s: State, name: String, args: Vec<Argument>, body: Vec<Term>, ty: Option<Type>) -> State {
     s.add_function(name, args, body, ty);
     return s
 }
 
-pub fn loc(s: &State, variable: &Variable) -> Result<Reference, String> {
+pub fn loc(s: &State, variable: &LVal) -> Result<Reference, String> {
+
+    println!("Locating variable: {:?}", variable.get_name());
     // loc(S, x) = ℓ
-    s.locate(variable.name.clone())
+    match variable {
+        LVal::Variable{name, ..} => {
+            s.locate(name.clone())
+        },
+        LVal::Deref { var, .. } => {
+            let name = var.get_name();
+            // get the reference to the value
+            let reference = s.locate(name.clone())?;
+            println!("Reference: {:?}", reference);
+            // get the value from the heap
+            let value = s.heap.get(reference).unwrap().value.clone();
+            println!("Value: {:?}", value);
+            match value {
+                Value::Reference(r) => Ok(r),
+                _ => Err(format!("Error dereferencing variable: {:?} is not a reference", name))
+            }
+        }
+    }
 }
 
-pub fn read(mut s: &State, variable: &Variable) -> Result<Value, String>
+pub fn read(mut s: &State, variable: &LVal) -> Result<Value, String>
 {
     s.heap.read(loc(s, variable)?)
 }
 
-pub fn write(mut s: State, variable: &Variable, value: &Value) -> Result<State, String> {
+pub fn write(mut s: State, variable: &LVal, value: &Value) -> Result<State, String> {
     
     s.heap.write(loc(&s, variable)?, value.clone())?;
     println!("State after write: {:?}", s);

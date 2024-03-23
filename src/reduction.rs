@@ -1,6 +1,6 @@
-use std::{cell::Ref, collections::HashMap, os::macos::raw::stat};
+use std::{collections::HashMap};
 
-use crate::{ast::{Argument, Declaration, Path, Program, Reference, Term, Value, Variable}, state::{add_function, bind, drop, drop_lifetime, insert, loc, read, write, StackFrame, State}, typecheck::TypeCheck, typing::AtomicType};
+use crate::{ast::{Argument, Declaration, Path, Program, Reference, Term, Value, LVal}, state::{add_function, bind, drop, drop_lifetime, insert, loc, read, write, StackFrame, State}, typecheck::TypeCheck, typing::Type};
 
 pub trait Evaluate {
     fn evaluate(&mut self, s: State, lifetime: usize) -> Result<(State, Self), String> where Self: Sized;
@@ -12,8 +12,8 @@ impl Evaluate for Value {
     }
 }
 
-impl Evaluate for Variable {
-    fn evaluate(&mut self, s: State, lifetime: usize) -> Result<(State, Variable), String> {
+impl Evaluate for LVal {
+    fn evaluate(&mut self, s: State, lifetime: usize) -> Result<(State, LVal), String> {
         return Ok((s, self.clone()))
     }
 }
@@ -42,7 +42,7 @@ impl Evaluate for Term {
                 };
                 
 
-                println!("Reducing function call");
+                // println!("Reducing function call");
 
                 let mut outer_state = s.clone();
 
@@ -55,9 +55,19 @@ impl Evaluate for Term {
                     let (s2, t) = match (param, arg) {
                         (Term::Variable(var), Argument { name, ty, mutable: false, reference: true }) => {
                             // create a reference
-                            let Ok(reference) = loc(&outer_state, &var) else {
+                            let Ok(mut reference) = loc(&outer_state, &var) else {
                                 return Err(format!("Variable: {:?} not found", var));
                             };
+                            reference.owned = false;
+                            (outer_state, Term::Value(Value::Reference(reference)))
+                        },
+                        (Term::Variable(var), Argument { name, ty, mutable: true, reference: true }) => {
+                            // read(S, w) = ⟨v⟩
+                            // println!("PINGG PONNGG");
+                            let Ok(mut reference) = loc(&outer_state, &var) else {
+                                return Err(format!("Variable: {:?} not found", var));
+                            };
+                            reference.owned = false;
                             (outer_state, Term::Value(Value::Reference(reference)))
                         },
                         (_, _) => param.clone().evaluate(outer_state, lifetime)?
@@ -91,7 +101,7 @@ impl Evaluate for Term {
                     let (s4, r) = insert(new_state, lifetime + 1, &value);
                     new_state = bind(s4, &arg.name, r);
                 }
-                println!("State after evaluating parameters: {:#?}", new_state);
+                // println!("State after evaluating parameters: {:#?}", new_state);
 
                 let mut t1: Term = Term::Value(Value::Epsilon);
 
@@ -102,8 +112,8 @@ impl Evaluate for Term {
                     t1 = t2;
                 }
 
-                println!("State after evaluating body: {:#?}", new_state);
-                println!("Returning: {:?}", t1);
+                // println!("State after evaluating body: {:#?}", new_state);
+                // println!("Returning: {:?}", t1);
 
                 let v = match t1 {
                     Term::Value(v) => {
@@ -117,7 +127,7 @@ impl Evaluate for Term {
                     _ => Value::Epsilon
                 };
 
-                println!("lifetime: {:?}", lifetime + 1);
+                // println!("lifetime: {:?}", lifetime + 1);
 
                 let final_state = drop_lifetime(new_state, lifetime + 1);
 
@@ -134,7 +144,7 @@ impl Evaluate for Term {
                 //         Argument { name, ty, mutable: false, reference: false} => {
                 //             match t {
                 //                 Term::Value(v) => {
-                //                     println!("BOOOO");
+                                    // println!("BOOOO");
                 //                     v
                 //                 },
                 //                 Term::Variable(var) => {
@@ -210,14 +220,13 @@ impl Evaluate for Term {
                 //         return Ok((s2, Term::Value(Value::Epsilon)))
                 //     }
                 // }
-                panic!("Not implemented");
             }
             Term::FunctionDeclaration { name, args, body, ty } => {
                 let s2 = add_function(s, name.to_string(), args.clone(), body.clone(), ty.clone());
                 return Ok((s2, Term::Value(Value::Epsilon)));
             }
             Term::Let { variable, term, .. } => {
-                println!("Reducing let {:?} = {:?}", variable, term);
+                // println!("Reducing let {:?} = {:?}", variable, term);
 
                 let (mut s2, t) = match term.evaluate(s, lifetime) {
                     Ok((s2, t)) => (s2, t),
@@ -229,33 +238,54 @@ impl Evaluate for Term {
                 let value = match t {
                     Term::Value(v) => v,
                     _ => {
-                        println!("Oh no!");
-                        println!("{:?}", t);
+                        // println!("Oh no!");
+                        // println!("{:?}", t);
                         panic!("Invalid term, this should not happen")
                     }
                 };
 
                 let (s3, r) = insert(s2, lifetime, &value);
-                println!("Binding variable: {:?} to reference: {:?}", variable.name, r);
-                // println!("{:#?}", s3.top());
-                let s4 = bind(s3, &variable.name, r);
+                // println!("Binding variable: {:?} to reference: {:?}", variable.name, r);
+                println!("{:#?}", s3.top());
+                let s4 = bind(s3, &variable.get_name(), r);
 
-                println!("Heap after let: {:#?}", s4.heap);
+                // println!("Heap after let: {:#?}", s4.heap);
                 return Ok((s4, Term::Value(Value::Epsilon)))
             }
             Term::Assign { variable, term } => {
-                println!("Reducing assignment of variable: {:?} with term: {:?}", variable.name, term);
+                println!("Reducing assignment of variable: {:?} with term: {:?}", variable.get_name(), term);
                 let (s2, t) = match term.evaluate(s, lifetime) {
                     Ok((s2, t)) => (s2, t),
                     Err(e) => return Err(e)
                 };
 
+                println!("Rval of assignment after evaluation: {:?}", t);
+
                 let value = match t {
                     Term::Value(v) => v,
                     _ => panic!("Invalid term, this should not happen")
                 };
-                let old_value = read(&s2, &variable)?;
 
+                println!("Value of rval: {:?}", value);
+
+
+                // if the value of the variable is a reference, we need to drop it
+                // this is a hack but time is of the essence
+
+                
+
+                let mut old_value = read(&s2, &variable)?;
+
+                println!("Old value: {:?}", old_value);
+                
+                // old_value = match old_value.clone() {
+                //     Value::Reference(r) => {
+                //         let s3 = drop(s2, &old_value);
+                //         let s4 = write(s3, &variable, &value)?;
+                //         return Ok((s4, Term::Value(Value::Epsilon)))
+                //     },
+                //     _ => old_value
+                // }
 
                 println!("Dropping: {:?}", old_value);
                 println!("Heap before drop: {:#?}", s2.heap);
@@ -263,6 +293,9 @@ impl Evaluate for Term {
                 let s3 = drop(s2, &old_value);
 
                 println!("Heap after drop: {:#?}", s3.heap);
+
+
+
                 let s4 = write(s3, &variable, &value)?;
                 
                 return Ok((s4, Term::Value(Value::Epsilon)))
@@ -270,8 +303,8 @@ impl Evaluate for Term {
             // Term::Move { variable } => {
             //     let value = read(&s, variable)?;
             //     let s2 = write(s, variable, &Value::Undefined)?;
-            //     println!("Reducing move of variable: {:?} with value: {:?}", variable, value);
-            //     println!("State after move: {:#?}", s2);
+                // println!("Reducing move of variable: {:?} with value: {:?}", variable, value);
+                // println!("State after move: {:#?}", s2);
             //     return Ok((s2, Term::Value(value)))
             // }
             // Term::Copy { variable } => {
@@ -292,8 +325,8 @@ impl Evaluate for Term {
 
                 // S2 = S1 [ℓn ↦ → ⟨v⟩∗]
                 let (s4, r) = insert(s3, 0, &value);
-                println!("Reference for boxed value: {:?}", r);
-                // println!("{:#?}", s4.top());
+                // println!("Reference for boxed value: {:?}", r);
+                println!("{:#?}", s4.top());
                 return Ok((s4, Term::Value(Value::Reference(r))))
             }
 
@@ -307,22 +340,23 @@ impl Evaluate for Term {
                 return Ok((s, Term::Value(Value::Reference(reference))))
             }
 
-            Term::Variable(var) => {
-                if var.copyable == Some(true) {
+            Term::Variable(var) => {         
+                println!("Reducing variable: {:?}", var.get_name());       
+                if var.is_copyable()? == true {
+                    println!("Reducing copy of variable: {:?}", var.get_name());
                     // read(S, w) = ⟨v⟩
                     let value = read(&s, var)?;
                     return Ok((s, Term::Value(value)))
-
-                } else if var.copyable == Some(false) {
+                } else if var.is_copyable()? == false {
+                    println!("Reducing move of variable: {:?}", var.get_name());
                     let value = read(&s, var)?;
                     let s2 = write(s, var, &Value::Undefined)?;
-                    // println!("Reducing move of variable: {:?} with value: {:?}", variable, value);
-                    // println!("State after move: {:#?}", s2);
+                    println!("Reducing move of variable: {:?} with value: {:?}", var.get_name(), value);
+                    println!("State after move: {:#?}", s2);
                     return Ok((s2, Term::Value(value)))
                 } else {
-                    panic!("Variable: {:?} has not been typechecked properly", var.name)
-
-                }
+                    panic!("Variable: {:?} has not been typechecked properly", var.get_name())
+                }        
             }
             Term::Value(val) => {
                 return Ok((s, Term::Value(val.clone())))
@@ -339,5 +373,4 @@ impl Evaluate for Term {
 
 //     let mut s = String::from("Hello");
 //     let mut s2 = t(s);
-//     println!("{:?}", s);
 // }

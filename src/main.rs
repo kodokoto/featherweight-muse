@@ -14,9 +14,8 @@ mod reduction;
 mod typecheck;
 
 fn t(x: &mut i32) {
-    let z = x;
+    *x = 6;code 
 }
-
 
 
 fn main() {
@@ -24,13 +23,15 @@ fn main() {
 
     // t(&mut x);
 
-    // x = 3;
+    // print!("{}", x);
+
+    // // x = 3;
 
 
     
-    // // let x = Box::new(1);
-    // // let p = t(x);
-    // // println!("{:?}", p);
+    // // // let x = Box::new(1);
+    // // // let p = t(x);
+    // // // println!("{:?}", p);
 
     // return;
 

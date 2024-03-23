@@ -1,6 +1,6 @@
 use std::{collections::HashMap, env};
 
-use crate::{ast::{Program, Value}, reduction::Evaluate, state::{Heap, StackFrame, State}};
+use crate::{ast::{Program, Value}, reduction::Evaluate, state::{Store, StackFrame, State}};
 
 pub struct Interpreter {
     state: State,
@@ -16,7 +16,7 @@ impl Interpreter {
                         functions: HashMap::new()
                     }
                 ],
-                Heap::new()
+                Store::new()
             ),
         }
     }
