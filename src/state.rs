@@ -1,6 +1,6 @@
 use std::{cell::Ref, collections::{btree_map::Values, HashMap}, hash::Hash, sync::atomic::{AtomicUsize, Ordering}};
 
-use crate::{ast::{Reference, Term, Value, LVal, Argument}, typing::Type};
+use crate::{ast::{Argument, LVal, Reference, Term, Value}, typing::{Slot, Type}};
 type Location = String;
 #[derive(Debug, Clone)]
 pub struct StackFrame {
@@ -8,15 +8,10 @@ pub struct StackFrame {
     pub functions: HashMap<String, (Vec<Argument>, Vec<Term>, Option<Type>)>
 }
 
-#[derive(Debug, Clone)]
-pub struct Slot {
-    pub value: Value,
-    pub lifetime: usize,
-}
 
 #[derive(Debug, Clone)]
 pub struct Store {
-    pub cells: HashMap<Location, Slot>,
+    pub cells: HashMap<Location, Slot<Value>>,
 }
 
 static COUNTER : AtomicUsize = AtomicUsize::new(1);
@@ -32,7 +27,7 @@ impl Store {
 
     pub fn allocate(&mut self, value: Value, lifetime: usize) -> Reference {
 
-        println!("Allocating value: {:?} with lifetime: {:?} to location {:?}", value, lifetime, self.cells.len());
+        // println!("Allocating value: {:?} with lifetime: {:?} to location {:?}", value, lifetime, self.cells.len());
         let location = format!("l-{}", get_id());
         let reference = Reference {
             location: location.clone(),
@@ -48,7 +43,7 @@ impl Store {
     }
 
     pub fn read(&self, reference: Reference) -> Result<Value, String> {
-        println!("READING value from location: {:?}", reference.location);
+        // println!("READING value from location: {:?}", reference.location);
         let location = reference.location;
         let mut value: Value = self.cells.get(&location).unwrap().value.clone();
         // if value is a reference, recursively read from the heap
@@ -62,12 +57,12 @@ impl Store {
     }
 
     pub fn write(&mut self, reference: Reference, value: Value) -> Result<(), String> {
-        println!("Writing value: {:?} to location {:?}", value, reference.location);
-        println!("Heap before write: {:#?}", self.cells);
+        // println!("Writing value: {:?} to location {:?}", value, reference.location);
+        // println!("Heap before write: {:#?}", self.cells);
         let location = reference.location;
-        println!("Location: {:?}", location);
+        // println!("Location: {:?}", location);
         self.cells.get_mut(&location).unwrap().value = value;
-        println!("Heap after write: {:#?}", self.cells);
+        // println!("Heap after write: {:#?}", self.cells);
         Ok(())
     }
 
@@ -111,7 +106,7 @@ impl Store {
         Ok(())
     }
 
-    pub fn get(&self, reference: Reference) -> Option<&Slot> {
+    pub fn get(&self, reference: Reference) -> Option<&Slot<Value>> {
         self.cells.get(&reference.location)
     }
 
@@ -133,6 +128,15 @@ impl State {
         }
     }
 
+    pub fn print(&self) {
+        for frame in &self.stack {
+            for (name, reference) in &frame.locations {
+                let value = self.heap.read(reference.clone()).unwrap();
+                println!("{}: {:?}", name, value);
+            }
+        }
+    }
+
     pub fn locate(&self, name: String) -> Result<Reference, String> {
         match self.top().locations.get(name.as_str()) {
             Some(reference) => Ok(reference.clone()),
@@ -140,6 +144,21 @@ impl State {
         }
     }
 
+
+    pub fn dom(&self) -> Vec<String> {
+        // for each stack frame, get the keys of the locations and create a set of all the keys
+        let mut keys = vec![];
+        for frame in &self.stack {
+            for key in frame.locations.keys() {
+                if keys.contains(key) {
+                    continue
+                } else {
+                keys.push(key.clone());
+                }
+            }
+        }
+        return keys
+    }
     // pub fn allocate(&mut self, value: Value, lifetime: u64) -> Reference {
     //     let reference = Reference {
     //         location: format!("l-{}", self.heap.len()),
@@ -227,7 +246,7 @@ pub fn add_function(mut s: State, name: String, args: Vec<Argument>, body: Vec<T
 
 pub fn loc(s: &State, variable: &LVal) -> Result<Reference, String> {
 
-    println!("Locating variable: {:?}", variable.get_name());
+    // println!("Locating variable: {:?}", variable.get_name());
     // loc(S, x) = ℓ
     match variable {
         LVal::Variable{name, ..} => {
@@ -237,10 +256,10 @@ pub fn loc(s: &State, variable: &LVal) -> Result<Reference, String> {
             let name = var.get_name();
             // get the reference to the value
             let reference = s.locate(name.clone())?;
-            println!("Reference: {:?}", reference);
+            // println!("Reference: {:?}", reference);
             // get the value from the heap
             let value = s.heap.get(reference).unwrap().value.clone();
-            println!("Value: {:?}", value);
+            // println!("Value: {:?}", value);
             match value {
                 Value::Reference(r) => Ok(r),
                 _ => Err(format!("Error dereferencing variable: {:?} is not a reference", name))
@@ -257,7 +276,7 @@ pub fn read(mut s: &State, variable: &LVal) -> Result<Value, String>
 pub fn write(mut s: State, variable: &LVal, value: &Value) -> Result<State, String> {
     
     s.heap.write(loc(&s, variable)?, value.clone())?;
-    println!("State after write: {:?}", s);
+    // println!("State after write: {:?}", s);
     Ok(s)  
 }
 
@@ -282,7 +301,7 @@ pub fn drop(mut s: State, value: &Value) -> State {
 
 pub fn drop_lifetime(mut s: State, lifetime: usize) -> State {
     // S [ℓw ↦ → ⟨·⟩m]
-    println!("Dropping lifetime: {:?}", lifetime);
+    // println!("Dropping lifetime: {:?}", lifetime);
     s.stack.remove(lifetime);
     s.heap.drop_lifetime(lifetime);
     s

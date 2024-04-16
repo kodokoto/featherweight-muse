@@ -18,7 +18,7 @@ impl Display for Reference {
 
 pub trait AST : Evaluate + TypeCheck {}
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum Value {
     NumericLiteral(i64),
     Reference(Reference),

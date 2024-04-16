@@ -1,7 +1,7 @@
 
 use core::borrow;
 
-use crate::{ast::{Argument, LVal, Path, Program, Term, Value}, typing::{write_prohibited, dom, move_var, read_prohibited, shape_compatible, write, Type, TypeEnviroment, _mut}};
+use crate::{ast::{Argument, LVal, Path, Program, Term, Value}, typing::{dom, move_var, read_prohibited, shape_compatible, write, write_prohibited, Slot, Type, TypeEnviroment, _mut}};
 
 pub trait TypeCheck {
     fn type_check(&mut self, gamma: TypeEnviroment, lifetime: usize) -> Result<(TypeEnviroment, Type), String>;
@@ -22,16 +22,16 @@ impl TypeCheck for LVal {
     fn type_check(&mut self, gamma: TypeEnviroment, lifetime: usize) -> Result<(TypeEnviroment, Type), String> {
         match self {
             LVal::Variable { name, copyable } => {
-                let (t, l) = gamma.get(&name)?;
+                let Slot {value: t, ..} = gamma.get(&name)?;
                 return Ok((gamma, t.clone()))
             },
             LVal::Deref { var } => {
-                let (t, l) = gamma.get(&var.get_name())?;
-                println!("{:?}", gamma);
-                println!("Type of variable: {:?} is {:?}", var.get_name(), t);
+                let Slot {value: t, ..} = gamma.get(&var.get_name())?;
+                // println!("{:?}", gamma);
+                // println!("Type of variable: {:?} is {:?}", var.get_name(), t);
                 match t.clone() {
                     Type::Reference { var: v, .. } => {
-                        let (t3, _l) = gamma.get(&v.get_name())?;
+                        let Slot{ value: t3, ..} = gamma.get(&v.get_name())?;
                         return Ok((gamma, t3))
                     },
                     Type::Box(tb) => return Ok((gamma, *tb.clone())),
@@ -64,8 +64,10 @@ impl TypeCheck for Term {
     fn type_check(&mut self, gamma: TypeEnviroment, lifetime: usize) -> Result<(TypeEnviroment, Type), String> {
         match self {
             Term::FunctionCall { name, params } => {
+
+                println!("Type checking function call: {:?}({:?})", name, params);
                 // get the function type from the type environment
-                match gamma.get(name)?.0 {
+                match gamma.get(name)?.value {
                     Type::Function { args, ret } => {
                         if args.len() != params.len() {
                             return Err(format!("Error type-checking function call:  function {:?} expected {:?} arguments, got {:?} arguments", name, args.len(), params.len()))
@@ -74,7 +76,7 @@ impl TypeCheck for Term {
                         for (arg, param) in args.iter().zip(params.iter_mut()) {
                             let (g2, t) = param.type_check(g1, lifetime)?;
                             if !shape_compatible(&g2, &arg.clone(), &t.clone()) {
-                                println!("Shape compatible: {:?} and {:?}", arg, t);
+                                // println!("Shape compatible: {:?} and {:?}", arg, t);
                                 return Err(format!("Error type-checking function call:  function {:?} expected argument of type {:?}, got argument of type {:?}", name, arg, t))
                             };
                             g1 = g2;
@@ -89,6 +91,8 @@ impl TypeCheck for Term {
                 }
             },
             Term::FunctionDeclaration { name: fn_name, args, body, ty } => {
+
+                println!("Type checking function declaration: {:?}({:?}) -> {:?}", fn_name, args.into_iter().map(|a| {a.name.clone()}).collect::<Vec<String>>(), ty);
                 // add function to type environment
                 let mut g2 = gamma;
 
@@ -132,7 +136,7 @@ impl TypeCheck for Term {
                     }
                 }
                 
-                println!("Type enviroment after adding arguments: {:#?}", g_block);
+                // println!("Type enviroment after adding arguments: {:#?}", g_block);
 
                 // type check the body of the function
                 let mut t = Type::Epsilon;
@@ -152,12 +156,12 @@ impl TypeCheck for Term {
                     None => {}
                 }
 
-                return Ok((g2, t))
+                return Ok((g2, Type::Epsilon))
             },
             Term::Variable(ref mut var) => {
                 let (g, t) = var.type_check(gamma, lifetime)?;
 
-                println!("LOL Type of variable: {:?}", t);
+                // println!("LOL Type of variable: {:?}", t);
 
                 var.set_copyable(t.copyable()); // mark the variable as copyable or not for reduction step
 
@@ -199,7 +203,7 @@ impl TypeCheck for Term {
 
                 // if the variable is copyable, copy semmantics apply, else we use move semmantics
                 if t.copyable() {
-                    print!("Type checking copy of variable: {:?} with type {:?}", var, t);
+                    println!("Type checking copy of variable: {:?} with type {:?}", var, t);
                     if read_prohibited(&g, var.clone()) {
                         return Err(format!("Variable: {:?} is not readable", var))
                     };
@@ -211,7 +215,7 @@ impl TypeCheck for Term {
                         return Err(format!("Error type-checking Move, variable {:?} is not writable", var))
                     };
                     let g3 = move_var(g, var.clone(), lifetime)?;
-                    println!("Move successfully completed, new type environment: {:?}", g3);
+                    // println!("Move successfully completed, new type environment: {:?}", g3);
                     return Ok((g3, t))
                 }
             },
@@ -246,32 +250,30 @@ impl TypeCheck for Term {
                 }
             },
             Term::Let { variable, term, .. } => {
-                println!("Type checking let declaration: ");
+                println!("Type checking let declaration of variable {:?} ", variable.get_name());
                 if dom(&gamma).contains(&variable.get_name()) {
                     return Err(format!("Error type-checking let declaration:  variable {:?} already exists", variable.get_name()))
                 };
                 let (mut g, t) = term.type_check(gamma, lifetime)?;
-                println!("Type of term: {:?}", t);
+                // println!("Type of term: {:?}", t);
                 match t {
                     Type::Epsilon => return Err(format!("Error type-checking let declaration: expression {:?} does not return a type", term)),
                     _ => {}
                 }
                 g.insert(variable.get_name().clone(), t.clone(), lifetime);
-                println!("{:?}", g);
+                // println!("{:?}", g);
                 return Ok((g, Type::Epsilon))
             },
             Term::Assign { variable, term } => {
-                println!("Type checking assignment: ");
-
-                println!("Assigning {:?} = {:?}", variable, term);
+                println!("Type checking assignment: {:?} = {:?}", variable, term);
 
                 let (mut g1, t1) = variable.type_check(gamma, lifetime)?;
 
-                println!("Partial type of lval {:? }: {:?}", variable.get_name(), t1);
+                // println!("Partial type of lval {:? }: {:?}", variable.get_name(), t1);
 
                 let (g2, t2) = term.type_check(g1, lifetime)?;
 
-                println!("Type of rval: {:?}", t2);
+                // println!("Type of rval: {:?}", t2);
 
                 if !shape_compatible(&g2, &t1, &t2.clone()) {
                     return Err(format!("Error type-checking assignment:  types {:?} and {:?} are not compatible", t1, t2.clone()))

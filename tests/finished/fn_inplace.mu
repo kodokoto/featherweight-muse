@@ -1,5 +1,5 @@
 fn five ( mut ref a : int ) {
-    deref a = 30
+    deref a = 5
 }
 
 let mut x = 0

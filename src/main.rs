@@ -12,6 +12,7 @@ mod interpreter;
 mod typing;
 mod reduction;
 mod typecheck;
+mod properties;
 
 
 fn main() {
@@ -76,7 +77,7 @@ fn main() {
     match ast.type_check(TypeEnviroment::new(), 0){
         Ok(_) => {},
         Err(e) => {
-            print!("TYPE ERROR: {}", e);
+            println!("TYPE ERROR: {}", e);
             return;
             // panic!("Type error")
         }
