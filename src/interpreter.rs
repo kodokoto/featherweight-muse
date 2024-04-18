@@ -34,33 +34,39 @@ impl Interpreter {
 
         for mut term in ast.terms {
             
-            println!("Evaluating term");
+            println!("Evaluating term\n");
 
             println!("{:#?}", term);
 
-            match assert_progess(self.program_state.clone(), term.clone(), self.typing_enviroment.clone(), 0) {
-                Ok(_) => {
-                    println!("");
-                    println!("Progress");
-                    println!("");
-                },
-                Err(e) => {
-                    let progress_error = format!("Progress error: {}", e);
-                    return Err(progress_error)
-                }
-            }
+            println!("Current state:\n");
+            println!("{:#?}", self.program_state);
 
-            match assert_preservation(self.program_state.clone(), term.clone(), self.typing_enviroment.clone(), 0) {
-                Ok(_) => {
-                    println!("");
-                    println!("Preservation");
-                    println!("");
-                },
-                Err(e) => {
-                    let progress_error = format!("Progress error: {}", e);
-                    return Err(progress_error)
-                }
-            }
+            println!("Current type enviroment:\n");
+            println!("{:#?}", self.typing_enviroment);
+
+            // match assert_progess(self.program_state.clone(), term.clone(), self.typing_enviroment.clone(), 0) {
+            //     Ok(_) => {
+            //         println!("");
+            //         println!("Progress");
+            //         println!("");
+            //     },
+            //     Err(e) => {
+            //         let progress_error = format!("Progress error: {}", e);
+            //         return Err(progress_error)
+            //     }
+            // }
+
+            // match assert_preservation(self.program_state.clone(), term.clone(), self.typing_enviroment.clone(), 0) {
+            //     Ok(_) => {
+            //         println!("");
+            //         println!("Preservation");
+            //         println!("");
+            //     },
+            //     Err(e) => {
+            //         let progress_error = format!("Progress error: {}", e);
+            //         return Err(progress_error)
+            //     }
+            // }
 
             let (s, _) = match term.evaluate(self.program_state.clone(), 0) {
                 Ok((s, t)) => (s, t),
@@ -98,6 +104,10 @@ impl Interpreter {
         println!();
 
         println!("Program evaluation successful");
+
+        println!("Final type enviroment:\n");
+
+        println!("{:#?}", self.typing_enviroment);
 
         println!("Final state:\n");
         

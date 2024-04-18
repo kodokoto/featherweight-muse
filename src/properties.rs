@@ -1,6 +1,6 @@
-use std::collections::HashSet;
+use std::{cell::Ref, collections::HashSet};
 
-use crate::{ast::{Term, Value}, reduction::Evaluate, state::State, typecheck::TypeCheck, typing::{contains, Slot, Type, TypeEnviroment}};
+use crate::{ast::{Reference, Term, Value}, reduction::Evaluate, state::State, typecheck::TypeCheck, typing::{contains, Slot, Type, TypeEnviroment}};
 
 pub fn assert_preservation(s1: State, mut t1: Term, g1: TypeEnviroment, lifetime: usize) -> Result<(), String> {
     println!("Asserting progress");
@@ -74,8 +74,8 @@ pub fn assert_progess(s1: State, mut t1: Term, g1: TypeEnviroment, lifetime: usi
 }
 
 pub fn safe_abstraction(s: State, g: TypeEnviroment) -> Result<bool, String> {
-    // println!("P: {:#?}", s);
-    // println!("G: {:#?}", g);
+    println!("P: {:#?}", s);
+    println!("G: {:#?}", g);
 
     let xs: HashSet<String> = s.dom().into_iter().collect();
     let ys: HashSet<String> = g.dom().into_iter().collect();
@@ -87,8 +87,10 @@ pub fn safe_abstraction(s: State, g: TypeEnviroment) -> Result<bool, String> {
     }
     for x in g.dom() {
         let l = &s.locate(x.clone())?;
-        if !valid_type(&s, &s.heap.get(l.clone()).unwrap().value, g.get(&x)?.value)? {
+        if !valid_type(&s, &s.heap.get(l.clone()).unwrap().value, g.get_partial(&x)?.value)? {
             println!("Invalid type");
+            println!("{:?} {:?}", s.heap.get(l.clone()).unwrap().value, g.get_partial(&x)?.value);
+            // panic!();
             return Ok(false)
         }
     }
@@ -157,7 +159,7 @@ pub fn valid_state(s: State, mut t: Term) -> Result<bool, String> {
 
 pub fn well_formed(g: TypeEnviroment) -> Result<bool, String> {
     for x in g.dom() {
-        let Slot {value: t, lifetime} = g.get(&x)?;
+        let Slot {value: t, lifetime} = g.get_partial(&x)?;
         if let Some(mut var) = contains(t) {
             var.type_check(g.clone(), lifetime);
         }
@@ -169,15 +171,15 @@ pub fn well_formed(g: TypeEnviroment) -> Result<bool, String> {
 
 pub fn valid_type(s: &State, v: &Value, t: Type) -> Result<bool, String> {
     match (v, t) {
-        (Value::Epsilon, Type::Epsilon) => return Ok(true),
-
-        (Value::NumericLiteral(_), Type::Numeric) => return Ok(true),
         (Value::Undefined, Type::Undefined(_)) => return Ok(true),
-        (Value::Reference(r), Type::Box(bt)) => {
+        (_, Type::Undefined(_t) ) => return valid_type(s, v, *_t),
+        (Value::Epsilon, Type::Epsilon) => return Ok(true),
+        (Value::NumericLiteral(_), Type::Numeric) => return Ok(true),
+        (Value::Reference(r @ Reference {owned: true, ..}), Type::Box(bt)) => {
             let vt = &s.heap.get(r.clone()).unwrap().value;
             return valid_type(s, &vt, *bt)
         },
-        (Value::Reference(r), Type::Reference { var, mutable } ) => {
+        (Value::Reference(r @ Reference {owned: false, ..}), Type::Reference { var, .. } ) => {
             let x: String = var.get_name();
             if s.locate(x.clone())? == r.clone() {
                 return Ok(true)

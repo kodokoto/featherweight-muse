@@ -215,7 +215,7 @@ impl TypeCheck for Term {
                         return Err(format!("Error type-checking Move, variable {:?} is not writable", var))
                     };
                     let g3 = move_var(g, var.clone(), lifetime)?;
-                    // println!("Move successfully completed, new type environment: {:?}", g3);
+                    println!("Move successfully completed, new type environment: {:?}", g3);
                     return Ok((g3, t))
                 }
             },

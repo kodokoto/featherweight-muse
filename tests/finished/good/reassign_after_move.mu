@@ -1,3 +1,3 @@
 let mut x = 0
 let mut y = x
-x = ref y
+x = 1

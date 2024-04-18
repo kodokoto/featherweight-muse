@@ -48,8 +48,8 @@ impl Type {
 
     fn prohibits_writing(&self, variable: LVal) -> bool {
         match self {
-            Type::Reference { mutable, var } => {
-                var.get_name() == variable.get_name() && !mutable
+            Type::Reference { var , ..} => {
+                var.get_name() == variable.get_name()
             },
             Type::Box(t) => t.prohibits_writing(variable),
             _ => false
@@ -190,8 +190,27 @@ impl TypeEnviroment {
     }
 
     pub fn get_atomic(&self, partial: Slot<Type>) -> Result<Slot<Type>, String> {
-        return match partial.value {
-            Type::Undefined(t) => Err(format!("Type of {:?} is undefined, chances are it was moved", t)),
+
+        return match partial.value.clone() {
+            Type::Undefined(t) => {
+                println!("Getting atomic type of {:?}", partial.value.clone());
+                println!("Gamma:");
+                println!("{:#?}", self.gamma);
+                // panic!("Type of {:?} is undefined, chances are it was moved", t);
+                Err(format!("Type of {:?} is undefined, chances are it was moved", t))
+            },
+            Type::Box(t) => {
+                match *t {
+                    Type::Undefined(nt) => {
+                        println!("Getting atomic type of {:?}", partial.value.clone());
+                        println!("Gamma:");
+                        println!("{:#?}", self.gamma);
+                        // panic!("Type of {:?} is undefined, chances are it was moved", nt);
+                        Err(format!("Type of {:?} is undefined, chances are it was moved", nt))
+                    },
+                    _ => Ok(partial.clone())
+                }
+            }
             _ => Ok(partial.clone())
         }
     }
@@ -245,9 +264,10 @@ pub fn root(gamma: &TypeEnviroment, lval: LVal) -> Result<LVal, String> {
 }
 
 pub fn write_prohibited(gamma: &TypeEnviroment, variable: LVal) -> bool {
-    // println!("Checking if {} is borrowed", variable.get_name());
+    println!("Checking if {} is borrowed", variable.get_name());
     // for each type in the type environment
     let v2 = root(gamma, variable.clone()).unwrap();
+
     for (var, Slot {value: t, ..}) in gamma.gamma.iter() {
         if t.prohibits_writing(v2.clone()) {
             return true;
@@ -269,8 +289,10 @@ pub fn read_prohibited(gamma: &TypeEnviroment, variable: LVal) -> bool {
 
 pub fn move_var(mut gamma: TypeEnviroment, variable: LVal, lifetime: Lifetime) -> Result<TypeEnviroment, String> {
     // for each type in the type environment
-    let t = gamma.get(&variable.get_name())?.value;
+    println!("Moving variable {:?}", variable.get_name());
+    let t = gamma.get_partial(&variable.get_name())?.value;
     gamma.insert(variable.get_name(), undefine(variable, t), lifetime);
+    println!("Check");
     Ok(gamma)
 }
 
@@ -410,6 +432,8 @@ pub fn write(gamma: TypeEnviroment, variable: LVal, t1: Type) -> Result<TypeEnvi
     return Ok(gamma2);
 }
 
+
+
 pub fn contains(t: Type) -> Option<LVal> {
     match t {
         Type::Reference { var, .. } => return Some(var),
@@ -445,4 +469,11 @@ pub fn contains(t: Type) -> Option<LVal> {
 //     let mut z = &x;
 
 //     *y = 1;
+// }
+
+// fn t() {
+//     let mut x = 0;
+//     let mut y = &mut x;
+//     *y = 4;
+
 // }

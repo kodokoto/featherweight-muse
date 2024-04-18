@@ -30,7 +30,7 @@ impl Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Value::NumericLiteral(n) => write!(f, "{}", n),
-            Value::Reference(r) => write!(f, "{}", r),
+            Value::Reference(r) => write!(f, "ref {}", r.location),
             Value::Epsilon => write!(f, "Epsilon"),
             Value::Undefined => write!(f, "Undefined")
         }
@@ -184,3 +184,9 @@ pub struct FunctionDeclaration {
 
 
 
+// fn f() {
+//     let mut x = Box::new(Box::new(5));
+//     let y = *x;
+
+//     let z = x;
+// }

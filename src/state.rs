@@ -131,8 +131,17 @@ impl State {
     pub fn print(&self) {
         for frame in &self.stack {
             for (name, reference) in &frame.locations {
-                let value = self.heap.read(reference.clone()).unwrap();
-                println!("{}: {:?}", name, value);
+                let mut _ref = false;
+                let mut value = self.heap.read(reference.clone()).unwrap();
+                while match value {
+                    Value::Reference(r) => {
+                        value = self.heap.read(r).unwrap();
+                        _ref = true;
+                        true
+                    },
+                    _ => false
+                } {};
+                println!("{}: {:} {:}", name, if _ref {"ref"} else {""}, value);
             }
         }
     }

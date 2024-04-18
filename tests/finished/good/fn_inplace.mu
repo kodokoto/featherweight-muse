@@ -4,6 +4,4 @@ fn five ( mut ref a : int ) {
 
 let mut x = 0
 
-
-
 five ( x )

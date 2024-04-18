@@ -3,5 +3,5 @@ fn test ( y : box int ) : box int {
 }
 
 let mut x = box 5
-let mut p = test ( x )
+let mut z = test ( x )
 
