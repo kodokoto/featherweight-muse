@@ -1,7 +1,7 @@
 
 use core::borrow;
 
-use crate::{ast::{Argument, LVal, Path, Program, Term, Value}, typing::{dom, move_var, read_prohibited, shape_compatible, write, write_prohibited, Slot, Type, TypeEnviroment, _mut}};
+use crate::{ast::{Argument, LVal, Program, Term, Value}, typing::{dom, move_var, read_prohibited, shape_compatible, write, write_prohibited, Slot, Type, TypeEnviroment, _mut}};
 
 pub trait TypeCheck {
     fn type_check(&mut self, gamma: TypeEnviroment, lifetime: usize) -> Result<(TypeEnviroment, Type), String>;

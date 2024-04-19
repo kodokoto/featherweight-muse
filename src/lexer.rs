@@ -1,5 +1,8 @@
+use regex::Regex;
+
 use crate::token::TokenKind;
 pub struct Lexer {
+    re: Regex,
     input: Vec<String>,
     current_position: usize,
 }
@@ -7,7 +10,8 @@ pub struct Lexer {
 impl Lexer {
     pub fn new(input: &str) -> Lexer {
         Lexer {
-            input: input.split_whitespace().map(|s| s.to_string()).collect(),
+            re: Regex::new(r#"([^\w]*\w*)"#).expect("regex"),
+            input: Regex::new(r#"[^\W_]+|\S"#).expect("regex").captures_iter(input).map(|c| c.get(0).unwrap().as_str().to_string()).collect::<Vec<String>>(),
             current_position: 0
         }
     }

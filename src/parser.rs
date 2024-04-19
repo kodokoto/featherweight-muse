@@ -1,6 +1,6 @@
 
 use crate::token::TokenKind;
-use crate::ast::{Argument, Declaration, Path, Program, Term, Value, LVal};
+use crate::ast::{Argument, Program, Term, Value, LVal};
 use crate::typing::Type;
 
 pub struct Parser

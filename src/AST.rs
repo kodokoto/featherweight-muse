@@ -38,22 +38,6 @@ impl Display for Value {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Path {
-    pub selectors: Vec<PathSelector>
-}
-
-type PathSelector = i32;
-
-// pub type Variable = String;
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Variable {
-    pub name: String,
-    pub path: Path,
-    pub copyable: Option<bool>,
-    pub deref: bool
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LVal {
     Variable {
         name: String,
@@ -102,28 +86,9 @@ impl LVal {
 }
 
 
-
-
 #[derive(Debug)]
 pub struct Program {
     pub terms: Vec<Term>,
-    // pub declarations: Vec<Declaration>
-}
-
-
-#[derive(Debug, Clone)]
-pub enum Declaration {
-    Function {
-        name: String,
-        args: Vec<Argument>,
-        body: Vec<Term>,
-        ty: Option<Type>
-    },
-    Let {
-        mutable: bool,
-        variable: LVal,
-        term: Box<Term>,
-    },
 }
 
 
@@ -173,20 +138,3 @@ pub struct Argument {
     pub reference: bool
 }
 
-
-pub struct FunctionDeclaration {
-    name: String,
-    args: Vec<Argument>,
-    body: Vec<Term>,
-    ty: Option<Type>
-}
-
-
-
-
-// fn f() {
-//     let mut x = Box::new(Box::new(5));
-//     let y = *x;
-
-//     let z = x;
-// }

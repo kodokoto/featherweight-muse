@@ -44,29 +44,29 @@ impl Interpreter {
             println!("Current type enviroment:\n");
             println!("{:#?}", self.typing_enviroment);
 
-            // match assert_progess(self.program_state.clone(), term.clone(), self.typing_enviroment.clone(), 0) {
-            //     Ok(_) => {
-            //         println!("");
-            //         println!("Progress");
-            //         println!("");
-            //     },
-            //     Err(e) => {
-            //         let progress_error = format!("Progress error: {}", e);
-            //         return Err(progress_error)
-            //     }
-            // }
+            match assert_progess(self.program_state.clone(), term.clone(), self.typing_enviroment.clone(), 0) {
+                Ok(_) => {
+                    println!("");
+                    println!("Progress");
+                    println!("");
+                },
+                Err(e) => {
+                    let progress_error = format!("Progress error: {}", e);
+                    return Err(progress_error)
+                }
+            }
 
-            // match assert_preservation(self.program_state.clone(), term.clone(), self.typing_enviroment.clone(), 0) {
-            //     Ok(_) => {
-            //         println!("");
-            //         println!("Preservation");
-            //         println!("");
-            //     },
-            //     Err(e) => {
-            //         let progress_error = format!("Progress error: {}", e);
-            //         return Err(progress_error)
-            //     }
-            // }
+            match assert_preservation(self.program_state.clone(), term.clone(), self.typing_enviroment.clone(), 0) {
+                Ok(_) => {
+                    println!("");
+                    println!("Preservation");
+                    println!("");
+                },
+                Err(e) => {
+                    let progress_error = format!("Progress error: {}", e);
+                    return Err(progress_error)
+                }
+            }
 
             let (s, _) = match term.evaluate(self.program_state.clone(), 0) {
                 Ok((s, t)) => (s, t),

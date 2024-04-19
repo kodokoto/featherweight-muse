@@ -13,7 +13,7 @@ mod typing;
 mod reduction;
 mod typecheck;
 mod properties;
-
+mod run_tests;
 
 fn main() {
     env::set_var("RUST_BACKTRACE", "1");

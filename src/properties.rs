@@ -114,7 +114,12 @@ pub fn valid_store(s: State) -> Result<bool, String> {
         if set.contains(&value.value) {
             return Ok(false); // Duplicate value found
         }
-        set.insert(value.value.clone());
+        match value.value {
+            Value::NumericLiteral(_) => {},
+            _ => {
+                set.insert(value.value.clone());
+            }
+        }
     }
     Ok(true)
 }

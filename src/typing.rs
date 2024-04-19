@@ -1,6 +1,6 @@
 use std::{collections::HashMap, rc::Weak};
 
-use crate::ast::{Path, LVal};
+use crate::ast::{LVal};
 
 #[derive(Debug, Clone)]
 pub struct Slot<T> {

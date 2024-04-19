@@ -1,6 +1,6 @@
 use std::{collections::HashMap};
 
-use crate::{ast::{Argument, Declaration, Path, Program, Reference, Term, Value, LVal}, state::{add_function, bind, drop, drop_lifetime, insert, loc, read, write, StackFrame, State}, typecheck::TypeCheck, typing::Type};
+use crate::{ast::{Argument, Program, Reference, Term, Value, LVal}, state::{add_function, bind, drop, drop_lifetime, insert, loc, read, write, StackFrame, State}, typecheck::TypeCheck, typing::Type};
 
 pub trait Evaluate {
     fn evaluate(&mut self, s: State, lifetime: usize) -> Result<(State, Self), String> where Self: Sized;
