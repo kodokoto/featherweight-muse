@@ -2,7 +2,7 @@
 use core::borrow;
 
 use crate::{ast::{Argument, LVal, Program, Term, Value}, typing::{dom, move_var, read_prohibited, shape_compatible, write, write_prohibited, Slot, Type, TypeEnviroment, _mut}};
-
+use crate::constants::TypeError;
 pub trait TypeCheck {
     fn type_check(&mut self, gamma: TypeEnviroment, lifetime: usize) -> Result<(TypeEnviroment, Type), String>;
 }
@@ -70,14 +70,14 @@ impl TypeCheck for Term {
                 match gamma.get(name)?.value {
                     Type::Function { args, ret } => {
                         if args.len() != params.len() {
-                            return Err(format!("Error type-checking function call:  function {:?} expected {:?} arguments, got {:?} arguments", name, args.len(), params.len()))
+                            return Err(TypeError::FUNCTION_CALL_INCOMPATABLE_ARGUMENT_COUNT(args.len(), params.len()).to_string())
                         };
                         let mut g1 = gamma;
                         for (arg, param) in args.iter().zip(params.iter_mut()) {
                             let (g2, t) = param.type_check(g1, lifetime)?;
                             if !shape_compatible(&g2, &arg.clone(), &t.clone()) {
                                 // println!("Shape compatible: {:?} and {:?}", arg, t);
-                                return Err(format!("Error type-checking function call:  function {:?} expected argument of type {:?}, got argument of type {:?}", name, arg, t))
+                                return Err(TypeError::FUNCTION_CALL_INCOMPATABLE_ARGUMENT_TYPE(arg.clone(), t.clone()).to_string())
                             };
                             g1 = g2;
                         }
@@ -87,12 +87,12 @@ impl TypeCheck for Term {
                             None => return Ok((g1, Type::Epsilon))
                         }
                     },
-                    _ => return Err(format!("Error type-checking function call:  function {:?} not found", name))
+                    _ => return Err(TypeError::FUNCTION_NOT_DEFINED(name.clone()).to_string())
                 }
             },
             Term::FunctionDeclaration { name: fn_name, args, body, ty } => {
 
-                println!("Type checking function declaration: {:?}({:?}) -> {:?}", fn_name, args.into_iter().map(|a| {a.name.clone()}).collect::<Vec<String>>(), ty);
+                // println!("Type checking function declaration: {:?}({:?}) -> {:?}", fn_name, args.into_iter().map(|a| {a.name.clone()}).collect::<Vec<String>>(), ty);
                 // add function to type environment
                 let mut g2 = gamma;
 
@@ -100,7 +100,7 @@ impl TypeCheck for Term {
                 // check for duplicate argument names
                 for (i, arg) in arg_names.iter().enumerate() {
                     if arg_names[i + 1..].contains(arg) {
-                        return Err(format!("Error type-checking function declaration:  duplicate argument name: {:?}", arg))
+                        return Err(TypeError::FUNCTION_DECL_DUP_ARG(arg.clone()).to_string())
                     }
                 }
 
@@ -132,7 +132,6 @@ impl TypeCheck for Term {
                                 lifetime
                             );
                         },
-                        _ => return Err(format!("Error type-checking function declaration:  invalid argument declaration: {:?}", arg))
                     }
                 }
                 
@@ -150,7 +149,7 @@ impl TypeCheck for Term {
                 match ty {
                     Some(ty) => {
                         if t != *ty {
-                            return Err(format!("Error type-checking function declaration:  function {:?} expected return type {:?}, got return type {:?}", fn_name, ty, t))
+                            return Err(TypeError::FUNCTION_UNEXPECTED_RETURN(t.clone(), ty.clone()).to_string())
                         }
                     },
                     None => {}
@@ -205,14 +204,14 @@ impl TypeCheck for Term {
                 if t.copyable() {
                     println!("Type checking copy of variable: {:?} with type {:?}", var, t);
                     if read_prohibited(&g, var.clone()) {
-                        return Err(format!("Variable: {:?} is not readable", var))
+                        return Err(TypeError::COPY_NOT_READABLE(var.get_name()).to_string())
                     };
                     return Ok((g, (t.clone())))
                 } else {
                     // let (g2, t) = var.type_check(g, lifetime)?;
                     println!("Type checking move of variable: {:?} with type {:?}", var, t);
                     if write_prohibited(&g, var.clone()) {
-                        return Err(format!("Error type-checking Move, variable {:?} is not writable", var))
+                        return Err(TypeError::MOVE_NOT_WRITABLE(var.get_name()).to_string())
                     };
                     let g3 = move_var(g, var.clone(), lifetime)?;
                     println!("Move successfully completed, new type environment: {:?}", g3);
@@ -230,10 +229,10 @@ impl TypeCheck for Term {
             Term::Ref { mutable, var } => {
                 if *mutable {
                     if write_prohibited(&gamma, var.clone()) {
-                        return Err(format!("Error creating mutable reference, variable {:?} is already referenced immutably", var.get_name()))
+                        return Err(TypeError::MUTREF_ALREADY_BORROWED_IMMUT(var.get_name()).to_string())
                     };
                     if !_mut(&gamma, var.clone()) {
-                        return Err(format!("Error creating mutable reference, variable {:?} is not mutable", var))
+                        return Err(TypeError::MUTREF_IMMUT(var.get_name()).to_string())
                     };
                     return Ok((gamma, Type::Reference { 
                         mutable: *mutable, 
@@ -241,7 +240,7 @@ impl TypeCheck for Term {
                     }))
                 } else {
                     if read_prohibited(&gamma, var.clone()) {
-                        return Err(format!("Error creating immutable reference, variable {:?} is borrowed mutably, therefore it has unique access", var))
+                        return Err(TypeError::REF_ALREADY_BORROWED_MUT(var.get_name()).to_string())
                     };
                     return Ok((gamma, Type::Reference { 
                         mutable: *mutable, 
@@ -250,14 +249,14 @@ impl TypeCheck for Term {
                 }
             },
             Term::Let { variable, term, .. } => {
-                println!("Type checking let declaration of variable {:?} ", variable.get_name());
+                // println!("Type checking let declaration of variable {:?} ", variable.get_name());
                 if dom(&gamma).contains(&variable.get_name()) {
-                    return Err(format!("Error type-checking let declaration:  variable {:?} already exists", variable.get_name()))
+                    return Err(TypeError::LET_ALREADY_DEFINED(variable.get_name()).to_string())
                 };
                 let (mut g, t) = term.type_check(gamma, lifetime)?;
                 // println!("Type of term: {:?}", t);
                 match t {
-                    Type::Epsilon => return Err(format!("Error type-checking let declaration: expression {:?} does not return a type", term)),
+                    Type::Epsilon => return Err(TypeError::LET_EXPR_NO_RETURN(*term.clone()).to_string()),
                     _ => {}
                 }
                 g.insert(variable.get_name().clone(), t.clone(), lifetime);
@@ -276,11 +275,11 @@ impl TypeCheck for Term {
                 // println!("Type of rval: {:?}", t2);
 
                 if !shape_compatible(&g2, &t1, &t2.clone()) {
-                    return Err(format!("Error type-checking assignment:  types {:?} and {:?} are not compatible", t1, t2.clone()))
+                    return Err(TypeError::INCOMPATABLE_TYPES(t1.clone(), t2.clone()).to_string())
                 };
 
                 if !t2.within(&g2, lifetime) {
-                    return Err(format!("Error type-checking assignment:  type {:?} is not within lifetime {:?}", t2, lifetime))
+                    return Err(TypeError::NOT_WITHIN_SCOPE(t2.to_string()).to_string())
                 }
 
                 // println!("Type enviroment before write: {:#?}", g2);
@@ -290,7 +289,7 @@ impl TypeCheck for Term {
                 // println!("Type enviroment after write: {:#?}", g3);
 
                 if write_prohibited(&g3, variable.clone()) {
-                    return Err(format!("Error type-checking assignment:  variable {:?} has been borrowed", variable.get_name()))
+                    return Err(TypeError::ASSIGN_BORROWED(variable.get_name()).to_string())
                 };
                 return Ok((g3, Type::Epsilon))        
             },

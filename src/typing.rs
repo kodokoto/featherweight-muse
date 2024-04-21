@@ -1,6 +1,6 @@
 use std::{collections::HashMap, rc::Weak};
 
-use crate::ast::{LVal};
+use crate::{ast::LVal, constants::TypeError};
 
 #[derive(Debug, Clone)]
 pub struct Slot<T> {
@@ -66,6 +66,39 @@ impl Type {
             _ => true
         }
     }
+
+    pub fn to_string(&self) -> String {
+        match self {
+            Type::Epsilon => "Epsilon".to_string(),
+            Type::Numeric => "Numeric".to_string(),
+            Type::Reference { var, mutable } => {
+                format!("{}Ref {}", if *mutable { " Mut" } else { "" }, var.get_name())
+            },
+            Type::Box(t) => {
+                format!("Box {}", t.to_string())
+            },
+            Type::Undefined(t) => {
+                format!("Undefined {}", t.to_string())
+            },
+            Type::Function { args, ret } => {
+                let mut s = "Function (".to_string();
+                for arg in args {
+                    s.push_str(&arg.to_string());
+                    s.push_str(", ");
+                }
+                s.push_str(") -> ");
+                match ret {
+                    Some(t) => {
+                        s.push_str(&t.to_string());
+                    },
+                    None => {
+                        s.push_str("None");
+                    }
+                }
+                return s;
+            }
+        }
+    } 
 }
 
 // pub trait Type where Self: Sized {
@@ -197,7 +230,7 @@ impl TypeEnviroment {
                 println!("Gamma:");
                 println!("{:#?}", self.gamma);
                 // panic!("Type of {:?} is undefined, chances are it was moved", t);
-                Err(format!("Type of {:?} is undefined, chances are it was moved", t))
+                Err(TypeError::TYPE_MOVED(*t.clone()).to_string())
             },
             Type::Box(t) => {
                 match *t {
@@ -206,7 +239,7 @@ impl TypeEnviroment {
                         println!("Gamma:");
                         println!("{:#?}", self.gamma);
                         // panic!("Type of {:?} is undefined, chances are it was moved", nt);
-                        Err(format!("Type of {:?} is undefined, chances are it was moved", nt))
+                        Err(TypeError::TYPE_MOVED(*nt.clone()).to_string())
                     },
                     _ => Ok(partial.clone())
                 }

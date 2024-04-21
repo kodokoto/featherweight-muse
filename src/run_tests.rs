@@ -1,7 +1,7 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::{ast::Value, interpreter::Interpreter, lexer::Lexer, parser::Parser};
+    use crate::{ast::{LVal, Value}, constants::TypeError, interpreter::Interpreter, lexer::Lexer, parser::Parser, typing::Type};
 
     fn run(file: &str) -> Result<Value, String> {
         let input = std::fs::read_to_string(file).expect("Error reading file");
@@ -28,12 +28,11 @@ mod tests {
 
     run_tests! {
         double_box_deref: ("tests/good/double_box_deref.mu", Ok(Value::Epsilon)),
-        double_mut_ref: ("tests/good/double_mut_ref.mu", Ok(Value::Epsilon)),
         fn_borrow: ("tests/good/fn_borrow.mu", Ok(Value::Epsilon)),
         fn_inplace: ("tests/good/fn_inplace.mu", Ok(Value::Epsilon)),
         fn_lifetime_transfer: ("tests/good/fn_lifetime_transfer.mu", Ok(Value::Epsilon)),
         immut_after_mut: ("tests/good/immut_after_mut.mu", Ok(Value::Epsilon)),
-        multiple_moves: ("tests/good/multiple_moves.mu", Ok(Value::Epsilon)),
+        multiple_move: ("tests/good/multiple_move.mu", Ok(Value::Epsilon)),
         reassign_after_move: ("tests/good/reassign_after_move.mu", Ok(Value::Epsilon)),
         reassign_deref: ("tests/good/reassign_deref.mu", Ok(Value::Epsilon)),
         reassign_in_diff_scope: ("tests/good/reassign_in_diff_scope.mu", Ok(Value::Epsilon)),
@@ -42,12 +41,13 @@ mod tests {
 
         // bad
 
-        assign_borrowed: ("tests/bad/assign_borrowed.mu", Err("Type error: Cannot assign to borrowed reference".to_string())),
-        assign_mut_borrowed: ("tests/bad/assign_mut_borrowed.mu", Err("Type error: Cannot assign to borrowed reference".to_string())),
-        bad_typing: ("tests/bad/bad_typing.mu", Err("Type error: Invalid type".to_string())),
-        dec_after_partial_move: ("tests/bad/dec_after_partial_move.mu", Err("Type error: Invalid type".to_string())),
-        mut_after_immut: ("tests/bad/mut_after_immut.mu", Err("Type error: Invalid type".to_string())),
-        mut_from_immut: ("tests/bad/mut_from_immut.mu", Err("Type error: Invalid type".to_string())),
+        double_mut_ref: ("tests/bad/double_mut_ref.mu", Err(TypeError::MUTREF_ALREADY_BORROWED_IMMUT("x".to_string()).to_string())),
+        assign_borrowed: ("tests/bad/assign_borrowed.mu", Err(TypeError::ASSIGN_BORROWED("x".to_string()).to_string())),
+        assign_mut_borrowed: ("tests/bad/assign_mut_borrowed.mu", Err(TypeError::ASSIGN_BORROWED("x".to_string()).to_string())),
+        bad_typing: ("tests/bad/bad_typing.mu", Err(TypeError::INCOMPATABLE_TYPES(Type::Box(Box::new(Type::Numeric)), Type::Reference { var: LVal::Variable { name: "z".to_string(), copyable: None }, mutable: false }).to_string())),
+        dec_after_partial_move: ("tests/bad/dec_after_partial_move.mu", Err(TypeError::TYPE_MOVED(Type::Box(Box::new(Type::Numeric))).to_string())),
+        mut_after_immut: ("tests/bad/mut_after_immut.mu", Err(TypeError::MUTREF_ALREADY_BORROWED_IMMUT("x".to_string()).to_string())),
+        mut_from_immut: ("tests/bad/mut_from_immut.mu", Err(TypeError::MUTREF_IMMUT("y".to_string()).to_string())),
 
     }
         
