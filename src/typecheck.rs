@@ -107,7 +107,7 @@ impl TypeCheck for Term {
                 let arg_types = args.iter().map(|arg| arg.ty.clone()).collect();
                 g2.insert(fn_name.clone(), Type::Function { args: arg_types, ret: ty.clone().map(Box::new) }, lifetime);
                 
-                let mut g_block = TypeEnviroment::new();
+                let mut g_block = g2.clone();
 
                 // add arguments to the type environment
                 for arg in args {
@@ -249,18 +249,23 @@ impl TypeCheck for Term {
                 }
             },
             Term::Let { variable, term, .. } => {
-                // println!("Type checking let declaration of variable {:?} ", variable.get_name());
+                // check if the variable is already defined
+                // x̸ ∈ dom(Γ1)
                 if dom(&gamma).contains(&variable.get_name()) {
                     return Err(TypeError::LET_ALREADY_DEFINED(variable.get_name()).to_string())
                 };
+
+                // type check the term
+                // Γ1 ⊢ t : T ⊣ Γ2
                 let (mut g, t) = term.type_check(gamma, lifetime)?;
-                // println!("Type of term: {:?}", t);
                 match t {
                     Type::Epsilon => return Err(TypeError::LET_EXPR_NO_RETURN(*term.clone()).to_string()),
                     _ => {}
                 }
+
+                // insert the variable into the type environment
+                // Γ3 = Γ2[x 7 → T ]
                 g.insert(variable.get_name().clone(), t.clone(), lifetime);
-                // println!("{:?}", g);
                 return Ok((g, Type::Epsilon))
             },
             Term::Assign { variable, term } => {

@@ -48,7 +48,10 @@ mod tests {
         dec_after_partial_move: ("tests/bad/dec_after_partial_move.mu", Err(TypeError::TYPE_MOVED(Type::Box(Box::new(Type::Numeric))).to_string())),
         mut_after_immut: ("tests/bad/mut_after_immut.mu", Err(TypeError::MUTREF_ALREADY_BORROWED_IMMUT("x".to_string()).to_string())),
         mut_from_immut: ("tests/bad/mut_from_immut.mu", Err(TypeError::MUTREF_IMMUT("y".to_string()).to_string())),
-
+        function_incorrect_arg_type: ("tests/bad/function_incorrect_arg_type.mu", Err(TypeError::FUNCTION_CALL_INCOMPATABLE_ARGUMENT_TYPE(Type::Numeric, Type::Box(Box::new(Type::Numeric))).to_string())),
+        function_incorrect_arg_count: ("tests/bad/function_incorrect_arg_count.mu", Err(TypeError::FUNCTION_CALL_INCOMPATABLE_ARGUMENT_COUNT(2, 1).to_string())),
+        function_incorrect_return_type: ("tests/bad/function_incorrect_return_type.mu", Err(TypeError::FUNCTION_UNEXPECTED_RETURN(Type::Numeric, Type::Box(Box::new(Type::Numeric))).to_string())),
+        worked_example: ("tests/bad/worked_example.mu", Err(TypeError::TYPE_MOVED(Type::Box(Box::new(Type::Numeric))).to_string())),
     }
         
     

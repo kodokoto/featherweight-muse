@@ -38,8 +38,8 @@ impl Evaluate for Term {
         match self {
             Term::FunctionCall { name, params } => {
                 println!("Reducing function call: {:?}()", name);
-                let (args, body, ty) = match s.top().functions.get(name) {
-                    Some((args, body, ty)) => (args.clone(), body.clone(), ty.clone()),
+                let (args, body) = match s.top().functions.get(name) {
+                    Some((args, body)) => (args.clone(), body.clone()),
                     None => return Err(format!("Function: {:?} not found", name))
                 };
                 // println!("Reducing function call");
@@ -230,20 +230,15 @@ impl Evaluate for Term {
                 return Ok((s2, Term::Value(Value::Epsilon)));
             }
             Term::Let { variable, term, .. } => {
-                println!("Reducing let {:?} = {:?}", variable, term);
 
                 let (mut s2, t) = match term.evaluate(s, lifetime) {
                     Ok((s2, t)) => (s2, t),
                     Err(e) => return Err(e)
                 };
 
-
-
                 let value = match t {
                     Term::Value(v) => v,
                     _ => {
-                        // println!("Oh no!");
-                        // println!("{:?}", t);
                         panic!("Invalid term, this should not happen")
                     }
                 };
@@ -256,54 +251,31 @@ impl Evaluate for Term {
                 // println!("Heap after let: {:#?}", s4.heap);
                 return Ok((s4, Term::Value(Value::Epsilon)))
             }
+            
             Term::Assign { variable, term } => {
-                println!("Reducing assignment of variable: {:?} with term: {:?}", variable.get_name(), term);
                 let (s2, t) = match term.evaluate(s, lifetime) {
                     Ok((s2, t)) => (s2, t),
                     Err(e) => return Err(e)
                 };
 
-                // println!("Rval of assignment after evaluation: {:?}", t);
-
+                // sanity check
                 let value = match t {
                     Term::Value(v) => v,
                     _ => panic!("Invalid term, this should not happen")
                 };
 
-                // println!("Value of rval: {:?}", value);
+                // v′ = read(S, w)
+                let old_value = read(&s2, &variable)?;
 
-
-                // if the value of the variable is a reference, we need to drop it
-                // this is a hack but time is of the essence
-
-                
-
-                let mut old_value = read(&s2, &variable)?;
-
-                // println!("Old value: {:?}", old_value);
-                
-                // old_value = match old_value.clone() {
-                //     Value::Reference(r) => {
-                //         let s3 = drop(s2, &old_value);
-                //         let s4 = write(s3, &variable, &value)?;
-                //         return Ok((s4, Term::Value(Value::Epsilon)))
-                //     },
-                //     _ => old_value
-                // }
-
-                // println!("Dropping: {:?}", old_value);
-                // println!("Heap before drop: {:#?}", s2.heap);
-
+                // S′ = drop(S, v′) 
                 let s3 = drop(s2, &old_value);
 
-                // println!("Heap after drop: {:#?}", s3.heap);
-
-
-
+                // S′′ = write(S′, w, v)
                 let s4 = write(s3, &variable, &value)?;
                 
                 return Ok((s4, Term::Value(Value::Epsilon)))
             }
+
             // Term::Move { variable } => {
             //     let value = read(&s, variable)?;
             //     let s2 = write(s, variable, &Value::Undefined)?;

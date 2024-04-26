@@ -1,8 +1,8 @@
-fn setToOne ( mut ref a : int ) {
-    deref a = 1
+fn setToOne(mut ref a : int) {
+    *a = 1
 }
 
 let mut x = 0
 let mut y = x
-setToOne ( y )
+setToOne(y)
 let mut w = y

@@ -5,7 +5,7 @@ type Location = String;
 #[derive(Debug, Clone)]
 pub struct StackFrame {
     pub locations: HashMap<String, Reference>,
-    pub functions: HashMap<String, (Vec<Argument>, Vec<Term>, Option<Type>)>
+    pub functions: HashMap<String, (Vec<Argument>, Vec<Term>)>
 }
 
 
@@ -238,7 +238,7 @@ impl State {
     }
 
     pub fn add_function(&mut self, name: String, args: Vec<Argument>, body: Vec<Term>, ty: Option<Type>) {
-        self.top_mut().functions.insert(name, (args, body, ty));
+        self.top_mut().functions.insert(name, (args, body));
     }
 
 }

@@ -23,7 +23,7 @@ impl Lexer {
                 match token.as_str() {
                     // "move" => Token::Move,
                     // "copy" => Token::Copy,
-                    "deref" => TokenKind::Deref,
+                    "*" => TokenKind::Deref,
                     "box" => TokenKind::Box,
                     "ref" => TokenKind::Ref,
                     "let" => TokenKind::Let,

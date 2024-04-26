@@ -1,3 +1,3 @@
 let mut x = 0
 let mut y = mut ref x
-deref y = 4
+*y = 4

@@ -53,7 +53,7 @@ impl TypeError {
             TypeError::FUNCTION_UNEXPECTED_RETURN(t1, t2) => format!("Type error: Unexpected return type: expected {}, got {}", t1.to_string(), t2.to_string()),
             TypeError::COPY_NOT_READABLE(s) => format!("Type error: Cannot copy variable that is mutually borrowed: {}", s),
             TypeError::MOVE_NOT_WRITABLE(s) => format!("Type error: Cannot move variable that is borrowd: {}", s),
-            TypeError::MUTREF_ALREADY_BORROWED_IMMUT(s) => format!("Type error: Mutable reference already borrowed immutably: {}", s),
+            TypeError::MUTREF_ALREADY_BORROWED_IMMUT(s) => format!("Type error: Cannot create a mutable reference to {} as it's already borrowed immutably", s),
             TypeError::MUTREF_IMMUT(s) => format!("Type error: Mutable reference cannot be created from immutable reference: {}", s),
             TypeError::REF_ALREADY_BORROWED_MUT(s) => format!("Type error: Immutable reference already borrowed mutably: {}", s),
             TypeError::LET_ALREADY_DEFINED(s) => format!("Type error: Variable already defined: {}", s),

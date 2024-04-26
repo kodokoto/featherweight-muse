@@ -43,9 +43,8 @@ pub fn assert_preservation(s1: State, mut t1: Term, g1: TypeEnviroment, lifetime
     
 }
 
-pub fn assert_progess(s1: State, mut t1: Term, g1: TypeEnviroment, lifetime: usize) -> Result<(), String> {
+pub fn assert_progess(s1: State, t1: Term, g1: TypeEnviroment, lifetime: usize) -> Result<(), String> {
     println!("Asserting progress");
-
 
     if !valid_state(s1.clone(), t1.clone())? {
         return Err("Invalid state".to_string())
