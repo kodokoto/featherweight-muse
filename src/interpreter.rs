@@ -1,8 +1,8 @@
-use std::{cell::Ref, collections::{HashMap, HashSet}, env};
+use std::{collections::HashMap, env};
 
-use crate::{ast::{LVal, Program, Term, Value, AST}, properties::{assert_preservation, assert_progess}, reduction::Evaluate, state::{StackFrame, State, Store}, typecheck::TypeCheck, typing::{contains, Slot, Type, TypeEnviroment}};
+use crate::{ast::{Program, Value}, properties::{assert_preservation, assert_progess}, reduction::Evaluate, state::{StackFrame, State, Store}, typecheck::TypeCheck, typing::TypeEnviroment};
 pub struct Interpreter {
-    program_state: State,
+    pub program_state: State,
     typing_enviroment: TypeEnviroment
 }
 
@@ -23,12 +23,9 @@ impl Interpreter {
     }
  
     pub fn run(&mut self, mut ast: Program) -> Result<Value, String> {
-
-        // Type check the program
-
         println!("Performing program type check");
 
-        let (gamma, t) = ast.type_check(self.typing_enviroment.clone(), 0)?;
+        ast.type_check(self.typing_enviroment.clone(), 0)?;
 
         println!("Program type check successful");
 
@@ -77,31 +74,12 @@ impl Interpreter {
 
             self.typing_enviroment = gamma2;
             self.program_state = s;
-            // if env::var("EVAL_OUT").is_ok() {
-            //     println!("{:#?}", self.program_state);
-            // }
-            
         }
-        // while ast.terms.len() > 0 {
-
-        //     assert_progess(self.program_state, ast, self.typing_enviroment, 0);
-
-        //     let (s, _) = match ast.evaluate(self.program_state.clone(), 0) {
-        //         Ok((s, t)) => (s, t),
-        //         Err(e) => return Err(e)
-        //     };
-        //     self.program_state = s;
-        //     let (gamma2, t2) = ast.type_check(self.typing_enviroment.clone(), 0)?;
-        //     self.typing_enviroment = gamma2;
-        //     if !safe_abstraction(self.program_state.clone(), self.typing_enviroment.clone())? {
-        //         return Err("Type error".to_string())
-        //     }
-        //     if env::var("EVAL_OUT").is_ok() {
-        //         println!("{:#?}", self.program_state);
-        //     }
-        // }
-
         println!();
+
+        if env::var("EVAL_OUT").is_ok() {
+            println!("{:#?}", self.program_state);
+        }
 
         println!("Program evaluation successful");
 
@@ -113,7 +91,6 @@ impl Interpreter {
         
         self.program_state.print();
         
-
         return Ok(Value::Epsilon)
     }
 }

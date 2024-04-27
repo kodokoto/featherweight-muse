@@ -1,9 +1,7 @@
 #[derive(Debug, PartialEq, Clone)]
-pub enum TokenKind {
+pub enum Token {
     NumericLiteral(i64),
     Identifier(String),
-    // Move,
-    // Copy,
     Box,
     Ref,
     Deref,
@@ -17,19 +15,5 @@ pub enum TokenKind {
     RCurl,
     Comma,
     Colon,
-    // LBrace,
-    // RBrace,
     EOF
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct Location {
-    pub line: usize,
-    pub column: usize
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct Token {
-    pub token_type: TokenKind,
-    pub location: Location
 }

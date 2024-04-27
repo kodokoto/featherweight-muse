@@ -2,7 +2,6 @@ use std::fmt::Display;
 
 use crate::{reduction::Evaluate, typecheck::TypeCheck, typing::Type};
 
-
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Reference {
     pub location: String,
@@ -68,40 +67,23 @@ impl LVal {
             }
         }
     }
-
-    // TODO: come back to this
     pub fn set_copyable(&mut self, copyable: bool) {
         match self {
             LVal::Variable { copyable: c, .. } => *c = Some(copyable),
             LVal::Deref { var } => var.set_copyable(copyable)
         }
     }
-
-    pub fn traverse(&self) -> LVal {
-        match self {
-            LVal::Variable { name, copyable } => LVal::Variable { name: name.clone(), copyable: copyable.clone() },
-            LVal::Deref { var } => var.traverse()
-        }
-    }
 }
-
 
 #[derive(Debug)]
 pub struct Program {
     pub terms: Vec<Term>,
 }
 
-
 #[derive(Debug, Clone)]
 pub enum Term {
     Variable(LVal),
     Value(Value),
-    // Move {
-    //     variable: Variable,
-    // },
-    // Copy {
-    //     variable: Variable,
-    // },
     Box {
         term: Box<Term>,
     },

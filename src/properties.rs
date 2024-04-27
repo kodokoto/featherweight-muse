@@ -1,8 +1,8 @@
-use std::{cell::Ref, collections::HashSet};
+use std::collections::HashSet;
 
 use crate::{ast::{Reference, Term, Value}, reduction::Evaluate, state::State, typecheck::TypeCheck, typing::{contains, Slot, Type, TypeEnviroment}};
 
-pub fn assert_preservation(s1: State, mut t1: Term, g1: TypeEnviroment, lifetime: usize) -> Result<(), String> {
+pub fn assert_preservation(s1: State, t1: Term, g1: TypeEnviroment, lifetime: usize) -> Result<(), String> {
     println!("Asserting progress");
 
 
@@ -96,17 +96,6 @@ pub fn safe_abstraction(s: State, g: TypeEnviroment) -> Result<bool, String> {
     return Ok(true)
 }
 
-// fn valid_term(term: Term) -> Result<bool, String>  {
-//     let vs : Vec<Value> = match term {
-//         Term::Value(v) => vec![v],
-//         _ => vec![]
-//     };
-
-
-// }
-
-
-
 pub fn valid_store(s: State) -> Result<bool, String> {
     let mut set = HashSet::new();
     for value in s.heap.cells.values() {
@@ -145,7 +134,7 @@ pub fn get_values(t: Term, mut set: HashSet<Value>) -> HashSet<Value> {
     }
 }
 
-pub fn valid_state(s: State, mut t: Term) -> Result<bool, String> {
+pub fn valid_state(s: State, t: Term) -> Result<bool, String> {
     if !valid_store(s.clone())? {
         return Err("Invalid store".to_string())
     }
@@ -165,13 +154,14 @@ pub fn well_formed(g: TypeEnviroment) -> Result<bool, String> {
     for x in g.dom() {
         let Slot {value: t, lifetime} = g.get_partial(&x)?;
         if let Some(mut var) = contains(t) {
-            var.type_check(g.clone(), lifetime);
+            match var.type_check(g.clone(), lifetime) {
+                Ok(_) => {},
+                Err(_) => return Ok(false)
+            }
         }
     }
-
     return Ok(true)
 }
-
 
 pub fn valid_type(s: &State, v: &Value, t: Type) -> Result<bool, String> {
     match (v, t) {

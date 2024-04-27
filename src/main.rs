@@ -80,7 +80,6 @@ fn main() {
         Err(e) => {
             println!("TYPE ERROR: {}", e);
             return;
-            // panic!("Type error")
         }
     };
 
