@@ -23,8 +23,8 @@ pub enum Type {
     Undefined(Box<Type>),
     Function {
         args: Vec<Type>,
-        ret: Option<Box<Type>>
-    }
+        ret: Option<Box<Type>>,
+    },
 }
 
 impl Type {
@@ -32,38 +32,34 @@ impl Type {
         match self {
             Type::Reference { mutable, .. } => !mutable,
             Type::Box(_) => false,
-            _ => true
+            _ => true,
         }
     }
 
     fn prohibits_reading(&self, variable: LVal) -> bool {
         match self {
-            Type::Reference { mutable, .. } => {
-                self.prohibits_writing(variable) && *mutable
-            },
+            Type::Reference { mutable, .. } => self.prohibits_writing(variable) && *mutable,
             Type::Box(t) => t.prohibits_reading(variable),
-            _ => false
+            _ => false,
         }
     }
 
     fn prohibits_writing(&self, variable: LVal) -> bool {
         match self {
-            Type::Reference { var , ..} => {
-                var.get_name() == variable.get_name()
-            },
+            Type::Reference { var, .. } => var.get_name() == variable.get_name(),
             Type::Box(t) => t.prohibits_writing(variable),
-            _ => false
+            _ => false,
         }
     }
 
     pub fn within(&self, gamma: &TypeEnviroment, lifetime: Lifetime) -> bool {
         match self {
             Type::Reference { var, .. } => {
-                let Slot {lifetime: l, ..} = gamma.get(&var.get_name()).unwrap();
+                let Slot { lifetime: l, .. } = gamma.get(&var.get_name()).unwrap();
                 return l <= lifetime;
-            },
+            }
             Type::Box(t) => t.within(gamma, lifetime),
-            _ => true
+            _ => true,
         }
     }
 
@@ -72,14 +68,18 @@ impl Type {
             Type::Epsilon => "Epsilon".to_string(),
             Type::Numeric => "Numeric".to_string(),
             Type::Reference { var, mutable } => {
-                format!("{}Ref {}", if *mutable { " Mut" } else { "" }, var.get_name())
-            },
+                format!(
+                    "{}Ref {}",
+                    if *mutable { " Mut" } else { "" },
+                    var.get_name()
+                )
+            }
             Type::Box(t) => {
                 format!("Box {}", t.to_string())
-            },
+            }
             Type::Undefined(t) => {
                 format!("Undefined {}", t.to_string())
-            },
+            }
             Type::Function { args, ret } => {
                 let mut s = "Function (".to_string();
                 for arg in args {
@@ -90,7 +90,7 @@ impl Type {
                 match ret {
                     Some(t) => {
                         s.push_str(&t.to_string());
-                    },
+                    }
                     None => {
                         s.push_str("None");
                     }
@@ -98,7 +98,7 @@ impl Type {
                 return s;
             }
         }
-    } 
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -109,19 +109,18 @@ pub struct TypeEnviroment {
 impl TypeEnviroment {
     pub fn new() -> TypeEnviroment {
         return TypeEnviroment {
-            gamma: HashMap::new()
-        }
+            gamma: HashMap::new(),
+        };
     }
 
     pub fn get_partial(&self, key: &Variable) -> Result<Slot<Type>, String> {
         return match self.gamma.get(key) {
             Some(t) => Ok(t.clone()),
-            None => panic!("Type not found")
-        }
+            None => panic!("Type not found"),
+        };
     }
 
     pub fn get_atomic(&self, partial: Slot<Type>) -> Result<Slot<Type>, String> {
-
         return match partial.value.clone() {
             Type::Undefined(t) => {
                 println!("Getting atomic type of {:?}", partial.value.clone());
@@ -129,7 +128,7 @@ impl TypeEnviroment {
                 println!("{:#?}", self.gamma);
                 // panic!("Type of {:?} is undefined, chances are it was moved", t);
                 Err(TypeError::TypeMoved(*t.clone()).to_string())
-            },
+            }
             Type::Box(t) => {
                 match *t {
                     Type::Undefined(nt) => {
@@ -138,12 +137,12 @@ impl TypeEnviroment {
                         println!("{:#?}", self.gamma);
                         // panic!("Type of {:?} is undefined, chances are it was moved", nt);
                         Err(TypeError::TypeMoved(*nt.clone()).to_string())
-                    },
-                    _ => Ok(partial.clone())
+                    }
+                    _ => Ok(partial.clone()),
                 }
             }
-            _ => Ok(partial.clone())
-        }
+            _ => Ok(partial.clone()),
+        };
     }
 
     pub fn get(&self, key: &Variable) -> Result<Slot<Type>, String> {
@@ -155,42 +154,43 @@ impl TypeEnviroment {
         self.gamma.insert(key, Slot { value, lifetime });
     }
 
-    pub fn dom(&self) -> Vec<String> {        
-        return self.gamma.keys()
-                         .filter(|s| {
-                            match self.get_partial(s) {
-                                Ok(t) => {
-                                    match t.value {
-                                        Type::Function { .. } => false,
-                                        _ => true
-                                    }
-                                },
-                                Err(_) => false
-                            }
-                         })
-                         .map(|s| s.clone()).collect();
+    pub fn dom(&self) -> Vec<String> {
+        return self
+            .gamma
+            .keys()
+            .filter(|s| match self.get_partial(s) {
+                Ok(t) => match t.value {
+                    Type::Function { .. } => false,
+                    _ => true,
+                },
+                Err(_) => false,
+            })
+            .map(|s| s.clone())
+            .collect();
     }
 }
 
 pub fn root(gamma: &TypeEnviroment, lval: LVal) -> Result<LVal, String> {
     match lval.clone() {
-        LVal::Variable { name, ..} => {
+        LVal::Variable { name, .. } => {
             // check if the variable is in the type environment
             if gamma.gamma.contains_key(&name) {
                 return Ok(lval);
             } else {
                 return Err(format!("Variable {:?} not found in type environment", name));
             }
-        },
+        }
         LVal::Deref { var } => {
             // check if the variable is in the type environment
             if gamma.gamma.contains_key(&var.get_name()) {
                 return Ok(*var);
             } else {
-                return Err(format!("Variable {:?} not found in type environment", var.get_name()));
+                return Err(format!(
+                    "Variable {:?} not found in type environment",
+                    var.get_name()
+                ));
             }
         }
-        
     }
 }
 
@@ -199,7 +199,7 @@ pub fn write_prohibited(gamma: &TypeEnviroment, variable: LVal) -> bool {
     // for each type in the type environment
     let v2 = root(gamma, variable.clone()).unwrap();
 
-    for (_, Slot {value: t, ..}) in gamma.gamma.iter() {
+    for (_, Slot { value: t, .. }) in gamma.gamma.iter() {
         if t.prohibits_writing(v2.clone()) {
             return true;
         }
@@ -210,7 +210,7 @@ pub fn write_prohibited(gamma: &TypeEnviroment, variable: LVal) -> bool {
 pub fn read_prohibited(gamma: &TypeEnviroment, variable: LVal) -> bool {
     // for each type in the type environment
     let v2 = root(gamma, variable.clone()).unwrap();
-    for (_, Slot {value: t, ..}) in gamma.gamma.iter() {
+    for (_, Slot { value: t, .. }) in gamma.gamma.iter() {
         if t.prohibits_reading(v2.clone()) {
             return true;
         }
@@ -218,7 +218,11 @@ pub fn read_prohibited(gamma: &TypeEnviroment, variable: LVal) -> bool {
     return false;
 }
 
-pub fn move_var(mut gamma: TypeEnviroment, variable: LVal, lifetime: Lifetime) -> Result<TypeEnviroment, String> {
+pub fn move_var(
+    mut gamma: TypeEnviroment,
+    variable: LVal,
+    lifetime: Lifetime,
+) -> Result<TypeEnviroment, String> {
     let t = gamma.get_partial(&variable.get_name())?.value;
     gamma.insert(variable.get_name(), undefine(variable, t), lifetime);
     Ok(gamma)
@@ -226,14 +230,18 @@ pub fn move_var(mut gamma: TypeEnviroment, variable: LVal, lifetime: Lifetime) -
 
 pub fn undefine(lval: LVal, t: Type) -> Type {
     match (lval.clone(), t.clone()) {
-        (LVal::Variable { .. }, _ ) => {
+        (LVal::Variable { .. }, _) => {
             return Type::Undefined(Box::new(t));
-        },
+        }
         (LVal::Deref { var }, Type::Box(t)) => {
             return Type::Box(Box::new(undefine(*var, *t)));
-        },
+        }
         _ => {
-            panic!("Tried to undefine something that you should not have lval: {:?}, type: {:?}", lval.clone(), t.clone());
+            panic!(
+                "Tried to undefine something that you should not have lval: {:?}, type: {:?}",
+                lval.clone(),
+                t.clone()
+            );
         }
     }
 }
@@ -246,19 +254,17 @@ pub fn shape_compatible(gamma: &TypeEnviroment, t1: &Type, t2: &Type) -> bool {
     match (t1, t2) {
         (Type::Numeric, Type::Numeric) => true,
         (Type::Box(bt1), Type::Box(bt2)) => shape_compatible(gamma, bt1, bt2),
-        (Type::Reference { mutable: m1, .. }, Type::Reference { mutable: m2, .. }) => {
-            m1 == m2
-        },
+        (Type::Reference { mutable: m1, .. }, Type::Reference { mutable: m2, .. }) => m1 == m2,
         (Type::Undefined(nt1), t2) => shape_compatible(gamma, nt1, t2),
         (t1, Type::Undefined(nt2)) => shape_compatible(gamma, t1, nt2),
-        _ => false
+        _ => false,
     }
 }
 
 pub fn _mut(gamma: &TypeEnviroment, variable: LVal) -> bool {
     let t = gamma.get(&variable.get_name()).unwrap().value;
     match (variable, t) {
-        (LVal::Deref { var } , Type::Box(_)) => _mut(gamma, *var),
+        (LVal::Deref { var }, Type::Box(_)) => _mut(gamma, *var),
         (LVal::Deref { .. }, Type::Reference { mutable, var: rvar }) => {
             if mutable {
                 // TODO: check if this should be var or rvar, my brain is not working
@@ -266,39 +272,48 @@ pub fn _mut(gamma: &TypeEnviroment, variable: LVal) -> bool {
             } else {
                 return false;
             }
-        },
-        _ => true
+        }
+        _ => true,
     }
 }
 
-pub fn update(gamma: TypeEnviroment, lv: &LVal, t1: Type, t2: Type) -> Result<(TypeEnviroment, Type), String> {
+pub fn update(
+    gamma: TypeEnviroment,
+    lv: &LVal,
+    t1: Type,
+    t2: Type,
+) -> Result<(TypeEnviroment, Type), String> {
     match lv {
         LVal::Variable { .. } => {
             return Ok((gamma, t2));
-        },
-        LVal::Deref { var } => {
-            match t1.clone() {
-                Type::Box(t) => {
-                    let (gamma2, t3) = update(gamma, var, *t, t2)?;
-                    return Ok((gamma2, Type::Box(Box::new(t3))));
-                },
-                Type::Reference { var: rvar, mutable } => {
-                    if !mutable {
-                        return Err(format!("Error updating reference: variable {:?} is not mutable", rvar));
-                    }
-                    let g3 = write(gamma, rvar, t2);
-                    return Ok((g3?, t1));
-                },
-                _ => {
-                    panic!("This should not happen");
-                }
-            }
         }
+        LVal::Deref { var } => match t1.clone() {
+            Type::Box(t) => {
+                let (gamma2, t3) = update(gamma, var, *t, t2)?;
+                return Ok((gamma2, Type::Box(Box::new(t3))));
+            }
+            Type::Reference { var: rvar, mutable } => {
+                if !mutable {
+                    return Err(format!(
+                        "Error updating reference: variable {:?} is not mutable",
+                        rvar
+                    ));
+                }
+                let g3 = write(gamma, rvar, t2);
+                return Ok((g3?, t1));
+            }
+            _ => {
+                panic!("This should not happen");
+            }
+        },
     }
 }
 
 pub fn write(gamma: TypeEnviroment, variable: LVal, t1: Type) -> Result<TypeEnviroment, String> {
-    let Slot {value: t2, lifetime: l} = gamma.get(&variable.get_name())?;
+    let Slot {
+        value: t2,
+        lifetime: l,
+    } = gamma.get(&variable.get_name())?;
     let (mut gamma2, t3) = update(gamma, &variable, t2, t1)?;
 
     gamma2.insert(variable.get_name(), t3, l);
@@ -309,6 +324,6 @@ pub fn contains(t: Type) -> Option<LVal> {
     match t {
         Type::Reference { var, .. } => return Some(var),
         Type::Box(t) => return contains(*t),
-        _ => return None
+        _ => return None,
     }
 }

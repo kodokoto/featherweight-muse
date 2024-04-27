@@ -9,12 +9,16 @@ pub struct Lexer {
 impl Lexer {
     pub fn new(input: &str) -> Lexer {
         Lexer {
-            input: Regex::new(r#"[^\W_]+|\S"#).expect("regex").captures_iter(input).map(|c| c.get(0).unwrap().as_str().to_string()).collect::<Vec<String>>(),
-            current_position: 0
+            input: Regex::new(r#"[^\W_]+|\S"#)
+                .expect("regex")
+                .captures_iter(input)
+                .map(|c| c.get(0).unwrap().as_str().to_string())
+                .collect::<Vec<String>>(),
+            current_position: 0,
         }
     }
 
-    fn next_token(&mut self) -> Token{
+    fn next_token(&mut self) -> Token {
         // if token is valid, return token, else return error
         match self.input.get(self.current_position) {
             Some(token) => {
@@ -43,11 +47,11 @@ impl Lexer {
                         }
                     }
                 }
-            },
-            None => Token::EOF
+            }
+            None => Token::EOF,
         }
     }
-    
+
     pub fn tokenize(&mut self) -> Vec<Token> {
         let mut tokens = Vec::new();
         loop {

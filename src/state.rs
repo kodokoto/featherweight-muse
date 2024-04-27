@@ -1,11 +1,17 @@
-use std::{collections::HashMap, sync::atomic::{AtomicUsize, Ordering}};
+use std::{
+    collections::HashMap,
+    sync::atomic::{AtomicUsize, Ordering},
+};
 
-use crate::{ast::{Argument, LVal, Reference, Term, Value}, typing::Slot};
+use crate::{
+    ast::{Argument, LVal, Reference, Term, Value},
+    typing::Slot,
+};
 type Location = String;
 #[derive(Debug, Clone)]
 pub struct StackFrame {
     pub locations: HashMap<String, Reference>,
-    pub functions: HashMap<String, (Vec<Argument>, Vec<Term>)>
+    pub functions: HashMap<String, (Vec<Argument>, Vec<Term>)>,
 }
 
 #[derive(Debug, Clone)]
@@ -13,14 +19,15 @@ pub struct Store {
     pub cells: HashMap<Location, Slot<Value>>,
 }
 
-static COUNTER : AtomicUsize = AtomicUsize::new(1);
-fn get_id() -> usize { COUNTER.fetch_add(1, Ordering::Relaxed) }
+static COUNTER: AtomicUsize = AtomicUsize::new(1);
+fn get_id() -> usize {
+    COUNTER.fetch_add(1, Ordering::Relaxed)
+}
 
 impl Store {
-
     pub fn new() -> Store {
         Store {
-            cells: HashMap::new()
+            cells: HashMap::new(),
         }
     }
 
@@ -29,11 +36,11 @@ impl Store {
         let reference = Reference {
             location: location.clone(),
             owned: true,
-            path: vec![]
+            path: vec![],
         };
         let slot = Slot {
             value: value.clone(),
-            lifetime: lifetime
+            lifetime: lifetime,
         };
         self.cells.insert(reference.location.clone(), slot);
         return reference;
@@ -50,7 +57,7 @@ impl Store {
         self.cells.get_mut(&location).unwrap().value = value;
         Ok(())
     }
-    
+
     pub fn drop_lifetime(&mut self, lifetime: usize) {
         // filter out all cells with the given lifetime
         let cells = self.cells.clone();
@@ -70,8 +77,8 @@ impl Store {
                     self.drop(&value)?;
                     self.cells.remove(location);
                 }
-            },
-            _ => ()
+            }
+            _ => (),
         };
         Ok(())
     }
@@ -79,7 +86,6 @@ impl Store {
     pub fn get(&self, reference: Reference) -> Option<&Slot<Value>> {
         self.cells.get(&reference.location)
     }
-
 }
 
 #[derive(Debug, Clone)]
@@ -89,13 +95,9 @@ pub struct State {
     pub heap: Store,
 }
 
-
 impl State {
     pub fn new(stack: Vec<StackFrame>, heap: Store) -> State {
-        State {
-            stack,
-            heap
-        }
+        State { stack, heap }
     }
 
     #[allow(dead_code)]
@@ -110,13 +112,16 @@ impl State {
                         value = self.heap.read(r).unwrap();
                         _ref = true;
                         true
-                    },
-                    _ => false
-                } {};
-                output.insert(name.clone(), format!("{:} {:}", if _ref {"ref"} else {""}, value));
+                    }
+                    _ => false,
+                } {}
+                output.insert(
+                    name.clone(),
+                    format!("{:} {:}", if _ref { "ref" } else { "" }, value),
+                );
             }
-        }  
-        return output  
+        }
+        return output;
     }
 
     pub fn print(&self) {
@@ -129,10 +134,10 @@ impl State {
                         value = self.heap.read(r).unwrap();
                         _ref = true;
                         true
-                    },
-                    _ => false
-                } {};
-                println!("{}: {:} {:}", name, if _ref {"ref"} else {""}, value);
+                    }
+                    _ => false,
+                } {}
+                println!("{}: {:} {:}", name, if _ref { "ref" } else { "" }, value);
             }
         }
     }
@@ -140,10 +145,13 @@ impl State {
     pub fn locate(&self, name: String) -> Result<Reference, String> {
         match self.top().locations.get(name.as_str()) {
             Some(reference) => Ok(reference.clone()),
-            None => Err(format!("Error locating variable: {:?} does not exist in {:#?}", name, self.top()))
+            None => Err(format!(
+                "Error locating variable: {:?} does not exist in {:#?}",
+                name,
+                self.top()
+            )),
         }
     }
-
 
     pub fn dom(&self) -> Vec<String> {
         // for each stack frame, get the keys of the locations and create a set of all the keys
@@ -151,44 +159,41 @@ impl State {
         for frame in &self.stack {
             for key in frame.locations.keys() {
                 if keys.contains(key) {
-                    continue
+                    continue;
                 } else {
-                keys.push(key.clone());
+                    keys.push(key.clone());
                 }
             }
         }
-        return keys
+        return keys;
     }
 
     pub fn top(&self) -> &StackFrame {
         let length = self.stack.len();
         let env = &self.stack.get(length - 1).unwrap();
-        return env
+        return env;
     }
 
     pub fn top_mut(&mut self) -> &mut StackFrame {
         let length = self.stack.len();
-        return &mut self.stack[length - 1]
+        return &mut self.stack[length - 1];
     }
 
     pub fn add_function(&mut self, name: String, args: Vec<Argument>, body: Vec<Term>) {
         self.top_mut().functions.insert(name, (args, body));
     }
-
 }
 
 // Helper functions
 pub fn add_function(mut s: State, name: String, args: Vec<Argument>, body: Vec<Term>) -> State {
     s.add_function(name, args, body);
-    return s
+    return s;
 }
 
 pub fn loc(s: &State, variable: &LVal) -> Result<Reference, String> {
     // loc(S, x) = ℓ
     match variable {
-        LVal::Variable{name, ..} => {
-            s.locate(name.clone())
-        },
+        LVal::Variable { name, .. } => s.locate(name.clone()),
         LVal::Deref { var, .. } => {
             let name = var.get_name();
             // get the reference to the value
@@ -197,20 +202,22 @@ pub fn loc(s: &State, variable: &LVal) -> Result<Reference, String> {
             let value = s.heap.get(reference).unwrap().value.clone();
             match value {
                 Value::Reference(r) => Ok(r),
-                _ => Err(format!("Error dereferencing variable: {:?} is not a reference", name))
+                _ => Err(format!(
+                    "Error dereferencing variable: {:?} is not a reference",
+                    name
+                )),
             }
         }
     }
 }
 
-pub fn read(s: &State, variable: &LVal) -> Result<Value, String>
-{
+pub fn read(s: &State, variable: &LVal) -> Result<Value, String> {
     s.heap.read(loc(s, variable)?)
 }
 
-pub fn write(mut s: State, variable: &LVal, value: &Value) -> Result<State, String> {    
+pub fn write(mut s: State, variable: &LVal, value: &Value) -> Result<State, String> {
     s.heap.write(loc(&s, variable)?, value.clone())?;
-    Ok(s)  
+    Ok(s)
 }
 
 pub fn insert(mut s: State, lifetime: usize, value: &Value) -> (State, Reference) {
@@ -237,4 +244,3 @@ pub fn drop_lifetime(mut s: State, lifetime: usize) -> State {
     s.heap.drop_lifetime(lifetime);
     s
 }
-

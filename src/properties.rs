@@ -1,29 +1,42 @@
 use std::collections::HashSet;
 
-use crate::{ast::{Reference, Term, Value}, reduction::Evaluate, state::State, typecheck::TypeCheck, typing::{contains, Slot, Type, TypeEnviroment}};
+use crate::{
+    ast::{Reference, Term, Value},
+    reduction::Evaluate,
+    state::State,
+    typecheck::TypeCheck,
+    typing::{contains, Slot, Type, TypeEnviroment},
+};
 
-pub fn assert_preservation(s1: State, t1: Term, g1: TypeEnviroment, lifetime: usize) -> Result<(), String> {
+pub fn assert_preservation(
+    s1: State,
+    t1: Term,
+    g1: TypeEnviroment,
+    lifetime: usize,
+) -> Result<(), String> {
     println!("Asserting progress");
 
-
     if !valid_state(s1.clone(), t1.clone())? {
-        return Err("Invalid state".to_string())
+        return Err("Invalid state".to_string());
     }
 
     if !well_formed(g1.clone())? {
-        return Err("Type enviroment is not well formed".to_string())
+        return Err("Type enviroment is not well formed".to_string());
     }
 
     if !safe_abstraction(s1.clone(), g1.clone())? {
-        return Err("Type enviroment is not a safe abstraction of current state".to_string())
+        return Err("Type enviroment is not a safe abstraction of current state".to_string());
     }
 
     let (g2, t) = t1.clone().type_check(g1, lifetime)?;
 
     let (s2, t2) = t1.clone().evaluate(s1, lifetime)?;
-    
+
     if !safe_abstraction(s2.clone(), g2)? {
-        return Err("Type enviroment is not a safe abstraction of current state after preservation".to_string())
+        return Err(
+            "Type enviroment is not a safe abstraction of current state after preservation"
+                .to_string(),
+        );
     }
 
     match t2 {
@@ -31,31 +44,35 @@ pub fn assert_preservation(s1: State, t1: Term, g1: TypeEnviroment, lifetime: us
             if !valid_type(&s2, &v, t.clone())? {
                 println!("Invalid type");
                 println!("{:?} {:?}", v, t.clone());
-                return Err("Invalid type".to_string())
+                return Err("Invalid type".to_string());
             } else {
                 return Ok(());
             }
-        },
+        }
         _ => {
             return Err("Term did not evaluate to a value".to_string());
         }
     }
-    
 }
 
-pub fn assert_progess(s1: State, t1: Term, g1: TypeEnviroment, lifetime: usize) -> Result<(), String> {
+pub fn assert_progess(
+    s1: State,
+    t1: Term,
+    g1: TypeEnviroment,
+    lifetime: usize,
+) -> Result<(), String> {
     println!("Asserting progress");
 
     if !valid_state(s1.clone(), t1.clone())? {
-        return Err("Invalid state".to_string())
+        return Err("Invalid state".to_string());
     }
 
     if !well_formed(g1.clone())? {
-        return Err("Type enviroment is not well formed".to_string())
+        return Err("Type enviroment is not well formed".to_string());
     }
 
     if !safe_abstraction(s1.clone(), g1.clone())? {
-        return Err("Type enviroment is not a safe abstraction of current state".to_string())
+        return Err("Type enviroment is not a safe abstraction of current state".to_string());
     }
 
     t1.clone().type_check(g1, lifetime)?;
@@ -63,13 +80,12 @@ pub fn assert_progess(s1: State, t1: Term, g1: TypeEnviroment, lifetime: usize) 
     match t1 {
         Term::Value(_) => {
             return Ok(());
-        },
+        }
         _ => {
             t1.clone().evaluate(s1, lifetime)?;
             return Ok(());
-        }     
+        }
     }
-    
 }
 
 pub fn safe_abstraction(s: State, g: TypeEnviroment) -> Result<bool, String> {
@@ -82,18 +98,26 @@ pub fn safe_abstraction(s: State, g: TypeEnviroment) -> Result<bool, String> {
     if xs != ys {
         println!("{:?} {:?}", s.dom(), g.dom());
         println!("Not the same domain");
-        return Ok(false)
+        return Ok(false);
     }
     for x in g.dom() {
         let l = &s.locate(x.clone())?;
-        if !valid_type(&s, &s.heap.get(l.clone()).unwrap().value, g.get_partial(&x)?.value)? {
+        if !valid_type(
+            &s,
+            &s.heap.get(l.clone()).unwrap().value,
+            g.get_partial(&x)?.value,
+        )? {
             println!("Invalid type");
-            println!("{:?} {:?}", s.heap.get(l.clone()).unwrap().value, g.get_partial(&x)?.value);
+            println!(
+                "{:?} {:?}",
+                s.heap.get(l.clone()).unwrap().value,
+                g.get_partial(&x)?.value
+            );
             // panic!();
-            return Ok(false)
+            return Ok(false);
         }
     }
-    return Ok(true)
+    return Ok(true);
 }
 
 pub fn valid_store(s: State) -> Result<bool, String> {
@@ -103,7 +127,7 @@ pub fn valid_store(s: State) -> Result<bool, String> {
             return Ok(false); // Duplicate value found
         }
         match value.value {
-            Value::NumericLiteral(_) => {},
+            Value::NumericLiteral(_) => {}
             _ => {
                 set.insert(value.value.clone());
             }
@@ -114,72 +138,69 @@ pub fn valid_store(s: State) -> Result<bool, String> {
 
 pub fn get_values(t: Term, mut set: HashSet<Value>) -> HashSet<Value> {
     match t {
-        Term::Box { term, ..} => {
+        Term::Box { term, .. } => {
             set.extend(get_values(*term, set.clone()));
-            return set
-        },
+            return set;
+        }
         Term::Assign { term, .. } => {
             set.extend(get_values(*term, set.clone()));
-            return set
-        },
-        Term::FunctionDeclaration { body, ..} => {
+            return set;
+        }
+        Term::FunctionDeclaration { body, .. } => {
             for term in body {
                 set.extend(get_values(term, set.clone()));
             }
-            return set
+            return set;
         }
-        _ => {
-            return set
-        }
+        _ => return set,
     }
 }
 
 pub fn valid_state(s: State, t: Term) -> Result<bool, String> {
     if !valid_store(s.clone())? {
-        return Err("Invalid store".to_string())
+        return Err("Invalid store".to_string());
     }
     let mut set = HashSet::new();
     set = get_values(t, set);
     for value in s.heap.cells.values() {
         if set.contains(&value.value) {
-            return Ok(false)
+            return Ok(false);
         }
     }
 
-    return Ok(true)
-
+    return Ok(true);
 }
 
 pub fn well_formed(g: TypeEnviroment) -> Result<bool, String> {
     for x in g.dom() {
-        let Slot {value: t, lifetime} = g.get_partial(&x)?;
+        let Slot { value: t, lifetime } = g.get_partial(&x)?;
         if let Some(mut var) = contains(t) {
             match var.type_check(g.clone(), lifetime) {
-                Ok(_) => {},
-                Err(_) => return Ok(false)
+                Ok(_) => {}
+                Err(_) => return Ok(false),
             }
         }
     }
-    return Ok(true)
+    return Ok(true);
 }
 
 pub fn valid_type(s: &State, v: &Value, t: Type) -> Result<bool, String> {
     match (v, t) {
         (Value::Undefined, Type::Undefined(_)) => return Ok(true),
-        (_, Type::Undefined(_t) ) => return valid_type(s, v, *_t),
+        (_, Type::Undefined(_t)) => return valid_type(s, v, *_t),
         (Value::Epsilon, Type::Epsilon) => return Ok(true),
         (Value::NumericLiteral(_), Type::Numeric) => return Ok(true),
-        (Value::Reference(r @ Reference {owned: true, ..}), Type::Box(bt)) => {
+        (Value::Reference(r @ Reference { owned: true, .. }), Type::Box(bt)) => {
             let vt = &s.heap.get(r.clone()).unwrap().value;
-            return valid_type(s, &vt, *bt)
-        },
-        (Value::Reference(r @ Reference {owned: false, ..}), Type::Reference { var, .. } ) => {
+            return valid_type(s, &vt, *bt);
+        }
+        (Value::Reference(r @ Reference { owned: false, .. }), Type::Reference { var, .. }) => {
             let x: String = var.get_name();
             if s.locate(x.clone())? == r.clone() {
-                return Ok(true)
+                return Ok(true);
             }
-            return Ok(true)
-        },
-        _ => return Ok(false)
+            return Ok(true);
+        }
+        _ => return Ok(false),
     }
 }

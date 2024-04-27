@@ -1,17 +1,14 @@
-
+use crate::ast::{Argument, LVal, Program, Term, Value};
 use crate::token::Token;
-use crate::ast::{Argument, Program, Term, Value, LVal};
 use crate::typing::Type;
 
-pub struct Parser
-{
+pub struct Parser {
     tokens: Vec<Token>,
     current_position: usize,
 }
 
 impl Parser {
-
-    fn check_consume(&mut self, token: Token)  {
+    fn check_consume(&mut self, token: Token) {
         match self.tokens.get(self.current_position) {
             Some(t) => {
                 if t == &token {
@@ -19,14 +16,13 @@ impl Parser {
                 } else {
                     panic!("Expected {:?}, got {:?}", token, t);
                 }
-            },
-            None => panic!("Unexpected EOF")
+            }
+            None => panic!("Unexpected EOF"),
         }
     }
 
     fn parse_let(&mut self) -> Term {
         self.check_consume(Token::Let);
-        // let mutable = self.check_if_mut(); all variables are mut for now
         self.check_consume(Token::Mut);
         let variable = self.parse_variable();
         self.check_consume(Token::Assign);
@@ -34,7 +30,7 @@ impl Parser {
         Term::Let {
             mutable: true,
             variable,
-            term: Box::new(term)
+            term: Box::new(term),
         }
     }
 
@@ -45,20 +41,18 @@ impl Parser {
         println!("Parsed assignment: {:?} = {:?}", variable, term);
         Term::Assign {
             variable,
-            term: Box::new(term)
+            term: Box::new(term),
         }
     }
 
     fn parse_function_declaration(&mut self) -> Term {
         self.check_consume(Token::Fn);
-        // expect identifier
-
         let name: String = match self.tokens.get(self.current_position) {
             Some(Token::Identifier(s)) => {
                 self.current_position += 1;
                 s.to_string()
-            },
-            _ => panic!("Expected identifier")
+            }
+            _ => panic!("Expected identifier"),
         };
 
         self.check_consume(Token::LParen);
@@ -69,8 +63,8 @@ impl Parser {
             Some(Token::Colon) => {
                 self.current_position += 1;
                 Some(self.parse_type())
-            },
-            _ => None
+            }
+            _ => None,
         };
 
         self.check_consume(Token::LCurl);
@@ -93,7 +87,7 @@ impl Parser {
             name,
             args,
             body,
-            ty
+            ty,
         }
     }
 
@@ -103,14 +97,14 @@ impl Parser {
                 self.current_position += 1;
                 match s.as_str() {
                     "int" => Type::Numeric,
-                    _ => panic!("Expected int type")
+                    _ => panic!("Expected int type"),
                 }
-            },
+            }
             Some(Token::Box) => {
                 self.current_position += 1;
                 Type::Box(Box::new(self.parse_type()))
-            },
-            _ => panic!("Expected type")
+            }
+            _ => panic!("Expected type"),
         }
     }
 
@@ -120,10 +114,10 @@ impl Parser {
             match self.tokens.get(self.current_position) {
                 Some(Token::RParen) => {
                     break;
-                },
+                }
                 Some(Token::Comma) => {
                     self.current_position += 1;
-                },
+                }
                 Some(Token::Identifier(s)) => {
                     self.current_position += 1;
                     let name = s.to_string();
@@ -133,17 +127,17 @@ impl Parser {
                         name,
                         mutable: false,
                         reference: false,
-                        ty
+                        ty,
                     });
-                },
+                }
                 Some(Token::Ref) => {
                     self.current_position += 1;
                     let name = match self.tokens.get(self.current_position) {
                         Some(Token::Identifier(s)) => {
                             self.current_position += 1;
                             s.to_string()
-                        },
-                        _ => panic!("Expected identifier")
+                        }
+                        _ => panic!("Expected identifier"),
                     };
                     self.check_consume(Token::Colon);
                     let ty = self.parse_type();
@@ -151,24 +145,24 @@ impl Parser {
                         name,
                         mutable: false,
                         reference: true,
-                        ty
+                        ty,
                     });
-                },
+                }
                 Some(Token::Mut) => {
                     self.current_position += 1;
                     let reference = match self.tokens.get(self.current_position) {
                         Some(Token::Ref) => {
                             self.current_position += 1;
                             true
-                        },
-                        _ => false
+                        }
+                        _ => false,
                     };
                     let name = match self.tokens.get(self.current_position) {
                         Some(Token::Identifier(s)) => {
                             self.current_position += 1;
                             s.to_string()
-                        },
-                        _ => panic!("Expected identifier")
+                        }
+                        _ => panic!("Expected identifier"),
                     };
                     self.check_consume(Token::Colon);
                     let ty = self.parse_type();
@@ -176,10 +170,10 @@ impl Parser {
                         name,
                         mutable: true,
                         reference,
-                        ty
+                        ty,
                     });
-                },
-                _ => panic!("Expected identifier or comma")
+                }
+                _ => panic!("Expected identifier or comma"),
             }
         }
         args
@@ -190,20 +184,20 @@ impl Parser {
             Some(Token::Identifier(s)) => {
                 self.current_position += 1;
                 s.to_string()
-            },
-            _ => panic!("Expected identifier")
+            }
+            _ => panic!("Expected identifier"),
         };
         self.check_consume(Token::LParen);
-    
+
         let mut params = Vec::new();
         loop {
             match self.tokens.get(self.current_position) {
                 Some(Token::RParen) => {
                     break;
-                },
+                }
                 Some(Token::Comma) => {
                     self.current_position += 1;
-                },
+                }
                 _ => {
                     let term = self.parse_term();
                     params.push(term);
@@ -211,45 +205,39 @@ impl Parser {
             }
         }
         self.check_consume(Token::RParen);
-        Term::FunctionCall {
-            name,
-            params
-        }
+        Term::FunctionCall { name, params }
     }
 
     fn parse_term(&mut self) -> Term {
         match self.tokens.get(self.current_position) {
             Some(token) => {
                 match token {
-                    Token::Fn => {
-                        self.parse_function_declaration()
-                    },
+                    Token::Fn => self.parse_function_declaration(),
                     Token::NumericLiteral(n) => {
                         self.current_position += 1;
                         Term::Value(Value::NumericLiteral(*n))
-                    },
+                    }
                     Token::Identifier(s) => {
                         // check if assignment
                         if self.tokens.get(self.current_position + 1) == Some(&Token::Assign) {
                             self.parse_assignment()
-                        } else if self.tokens.get(self.current_position + 1) == Some(&Token::LParen) {
+                        } else if self.tokens.get(self.current_position + 1) == Some(&Token::LParen)
+                        {
                             self.parse_function_call()
                         } else {
                             self.current_position += 1;
-                            Term::Variable(
-                                LVal::Variable {
-                                    name: s.to_string(),
-                                    copyable: None
-                                }
-                            )
+                            Term::Variable(LVal::Variable {
+                                name: s.to_string(),
+                                copyable: None,
+                            })
                         }
-                    },
+                    }
                     Token::Box => {
                         self.current_position += 1;
                         Term::Box {
-                            term: Box::new(self.parse_term())
+                            term: Box::new(self.parse_term()),
                         }
-                    },
+                    }
                     Token::Mut => {
                         // should only be mut ref
                         self.current_position += 1;
@@ -258,66 +246,58 @@ impl Parser {
                         println!("{:?}", self.tokens.get(self.current_position));
                         Term::Ref {
                             mutable: true,
-                            var: self.parse_variable()
+                            var: self.parse_variable(),
                         }
-                    },
+                    }
                     Token::Ref => {
                         self.current_position += 1;
                         Term::Ref {
                             mutable: false,
-                            var: self.parse_variable()
+                            var: self.parse_variable(),
                         }
-                    },
-                    Token::Let => {
-                        self.parse_let()
-                    },
+                    }
+                    Token::Let => self.parse_let(),
 
                     Token::Deref => {
                         if self.tokens.get(self.current_position + 2) == Some(&Token::Assign) {
                             self.parse_assignment()
                         } else {
-                        self.current_position += 1;
-                        Term::Variable(
-                            LVal::Deref {
-                                var: Box::new(self.parse_variable())
-                            }
-                        )}
-                    },
-                    _ => panic!("Invalid token: {:?}", token)
+                            self.current_position += 1;
+                            Term::Variable(LVal::Deref {
+                                var: Box::new(self.parse_variable()),
+                            })
+                        }
+                    }
+                    _ => panic!("Invalid token: {:?}", token),
                 }
-            },
-            None => panic!("Unexpected EOF")
+            }
+            None => panic!("Unexpected EOF"),
         }
     }
 
     fn parse_variable(&mut self) -> LVal {
         match self.tokens.get(self.current_position) {
-            Some(token) => {
-                match token {
-                    Token::Identifier(s) => {
-                        self.current_position += 1;
-                        LVal::Variable {
-                            name: s.to_string(),
-                            copyable: None
-                        }
-                    },
-                    Token::Deref => {
-                        self.current_position += 1;
-                        let var = self.parse_variable();
-                        LVal::Deref {
-                            var: Box::new(var)
-                        }
+            Some(token) => match token {
+                Token::Identifier(s) => {
+                    self.current_position += 1;
+                    LVal::Variable {
+                        name: s.to_string(),
+                        copyable: None,
                     }
-                    _ => panic!("Invalid token: {:?}, expected variable", token)
                 }
+                Token::Deref => {
+                    self.current_position += 1;
+                    let var = self.parse_variable();
+                    LVal::Deref { var: Box::new(var) }
+                }
+                _ => panic!("Invalid token: {:?}, expected variable", token),
             },
-            None => panic!("Unexpected EOF")
+            None => panic!("Unexpected EOF"),
         }
     }
 
     pub fn parse(&mut self) -> Program {
         let mut terms = Vec::new();
-        // let mut declarations = Vec::new();
         loop {
             let term = self.parse_term();
             terms.push(term);
@@ -325,15 +305,13 @@ impl Parser {
                 break;
             }
         }
-        Program {
-            terms,
-        }
+        Program { terms }
     }
 
     pub fn new(tokens: Vec<Token>) -> Parser {
         Parser {
             tokens,
-            current_position: 0
+            current_position: 0,
         }
     }
 }

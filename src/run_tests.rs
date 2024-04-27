@@ -1,9 +1,11 @@
-
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
 
-    use crate::{ast::LVal, constants::TypeError, interpreter::Interpreter, lexer::Lexer, parser::Parser, typing::Type};
+    use crate::{
+        ast::LVal, constants::TypeError, interpreter::Interpreter, lexer::Lexer, parser::Parser,
+        typing::Type,
+    };
 
     fn run(file: &str) -> Result<HashMap<String, String>, String> {
         let input = std::fs::read_to_string(file).expect("Error reading file");
@@ -14,10 +16,8 @@ mod tests {
         let mut interpreter = Interpreter::new();
         let result = interpreter.run(ast);
         match result {
-            Ok(_) => {
-                Ok(interpreter.program_state.output())
-            },
-            Err(e) => return Err(e)
+            Ok(_) => Ok(interpreter.program_state.output()),
+            Err(e) => return Err(e),
         }
     }
 

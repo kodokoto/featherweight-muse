@@ -15,5 +15,5 @@ pub enum Token {
     RCurl,
     Comma,
     Colon,
-    EOF
+    EOF,
 }

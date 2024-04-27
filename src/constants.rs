@@ -15,7 +15,7 @@ pub enum TypeError {
     AssignBorrowed(String),
     IncompatibleTypes(Type, Type),
     NotWithinScope(String),
-    TypeMoved(Type)
+    TypeMoved(Type),
 }
 
 impl TypeError {
@@ -40,4 +40,3 @@ impl TypeError {
         }
     }
 }
-
