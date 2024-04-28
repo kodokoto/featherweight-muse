@@ -4,7 +4,7 @@ An implementation of a featherweight muse interpreter written in Rust.
 
 Featherweight muse is a simple language that is a subset of muse. It is designed to test the type system and the evaluation of muse, including compile-time memory management through borrow checking and local type inference.
 
-Currently featherweight muse supports the following:
+Currently, featherweight muse supports the following:
 - [x] Variable declarations
 - [x] Function declarations
 - [x] Function calls
@@ -41,6 +41,11 @@ Options:
         -p, -parse      Display parser output
         -t, -typecheck  Display typecheck output
         -e, -eval       Display eval output
+```
+
+### Test
+```bash
+cargo test
 ```
 
 ## Example
