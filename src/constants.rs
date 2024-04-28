@@ -23,7 +23,7 @@ impl TypeError {
         match self {
             TypeError::FunctionCallIncompatableArgumentCount(a1, a2) => format!("Type error: Incompatible argument count: expected {}, got {}", a1, a2),
             TypeError::FunctionCallIncompatableArgumentType(t1, t2) => format!("Type error: Incompatible argument type: expected {}, got {}", t1.to_string(), t2.to_string()),
-            TypeError::FunctionNotDefined(s) => format!("Type error: Function not defined: {}", s),
+            TypeError::FunctionNotDefined(s) => format!("Type error: Function not defined: {}()", s),
             TypeError::FunctionDeclDupArg(s) => format!("Type error: Duplicate argument in function declaration: {}", s),
             TypeError::FunctionUnexpectedReturn(t1, t2) => format!("Type error: Unexpected return type: expected {}, got {}", t1.to_string(), t2.to_string()),
             TypeError::CopyNotReadable(s) => format!("Type error: Cannot copy variable that is mutually borrowed: {}", s),

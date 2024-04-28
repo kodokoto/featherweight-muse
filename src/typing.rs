@@ -100,7 +100,7 @@ impl TypeEnviroment {
     pub fn get_partial(&self, key: &Variable) -> Result<Slot<Type>, String> {
         return match self.gamma.get(key) {
             Some(t) => Ok(t.clone()),
-            None => panic!("Type not found"),
+            None => Err("Type not found".to_string()),
         };
     }
 

@@ -61,6 +61,10 @@ mod tests {
         fn_lifetime_transfer: ("tests/good/fn_lifetime_transfer.mu", Ok(vec![
             ("x", " 5"),
         ])),
+        fn_transfer: ("tests/good/fn_transfer.mu", Ok(vec![
+            ("x", " Undefined"),
+            ("z", "ref 5"),
+        ])),
         immut_after_mut: ("tests/good/immut_after_mut.mu", Ok(vec![
             ("x", " 0"),
             ("y", "ref 0"),
@@ -110,5 +114,7 @@ mod tests {
         function_incorrect_arg_count: ("tests/bad/function_incorrect_arg_count.mu", Err(TypeError::FunctionCallIncompatableArgumentCount(2, 1).to_string())),
         function_incorrect_return_type: ("tests/bad/function_incorrect_return_type.mu", Err(TypeError::FunctionUnexpectedReturn(Type::Numeric, Type::Box(Box::new(Type::Numeric))).to_string())),
         worked_example: ("tests/bad/worked_example.mu", Err(TypeError::TypeMoved(Type::Box(Box::new(Type::Numeric))).to_string())),
+        func_not_def: ("tests/bad/func_not_def.mu", Err(TypeError::FunctionNotDefined("g".to_string()).to_string())),
+        func_dup_arg: ("tests/bad/func_dup_arg.mu", Err(TypeError::FunctionDeclDupArg("x".to_string()).to_string())),
     }
 }

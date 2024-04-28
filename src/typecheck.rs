@@ -84,7 +84,10 @@ impl TypeCheck for Term {
         match self {
             Term::FunctionCall { name, params } => {
                 // get the function type from the type environment
-                match gamma.get(name)?.value {
+                let Ok(Slot { value, .. }) = gamma.get(name) else {
+                    return Err(TypeError::FunctionNotDefined(name.clone()).to_string());
+                };
+                match value {
                     Type::Function { args, ret } => {
                         if args.len() != params.len() {
                             return Err(TypeError::FunctionCallIncompatableArgumentCount(
