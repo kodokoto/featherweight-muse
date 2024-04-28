@@ -92,12 +92,12 @@ impl Store {
 
 pub struct State {
     pub stack: Vec<StackFrame>,
-    pub heap: Store,
+    pub store: Store,
 }
 
 impl State {
     pub fn new(stack: Vec<StackFrame>, heap: Store) -> State {
-        State { stack, heap }
+        State { stack, store: heap }
     }
 
     #[allow(dead_code)]
@@ -106,10 +106,10 @@ impl State {
         for frame in &self.stack {
             for (name, reference) in &frame.locations {
                 let mut _ref = false;
-                let mut value = self.heap.read(reference.clone()).unwrap();
+                let mut value = self.store.read(reference.clone()).unwrap();
                 while match value {
                     Value::Reference(r) => {
-                        value = self.heap.read(r).unwrap();
+                        value = self.store.read(r).unwrap();
                         _ref = true;
                         true
                     }
@@ -128,10 +128,10 @@ impl State {
         for frame in &self.stack {
             for (name, reference) in &frame.locations {
                 let mut _ref = false;
-                let mut value = self.heap.read(reference.clone()).unwrap();
+                let mut value = self.store.read(reference.clone()).unwrap();
                 while match value {
                     Value::Reference(r) => {
-                        value = self.heap.read(r).unwrap();
+                        value = self.store.read(r).unwrap();
                         _ref = true;
                         true
                     }
@@ -199,7 +199,7 @@ pub fn loc(s: &State, variable: &LVal) -> Result<Reference, String> {
             // get the reference to the value
             let reference = s.locate(name.clone())?;
             // get the value from the heap
-            let value = s.heap.get(reference).unwrap().value.clone();
+            let value = s.store.get(reference).unwrap().value.clone();
             match value {
                 Value::Reference(r) => Ok(r),
                 _ => Err(format!(
@@ -212,17 +212,17 @@ pub fn loc(s: &State, variable: &LVal) -> Result<Reference, String> {
 }
 
 pub fn read(s: &State, variable: &LVal) -> Result<Value, String> {
-    s.heap.read(loc(s, variable)?)
+    s.store.read(loc(s, variable)?)
 }
 
 pub fn write(mut s: State, variable: &LVal, value: &Value) -> Result<State, String> {
-    s.heap.write(loc(&s, variable)?, value.clone())?;
+    s.store.write(loc(&s, variable)?, value.clone())?;
     Ok(s)
 }
 
 pub fn insert(mut s: State, lifetime: usize, value: &Value) -> (State, Reference) {
     // S [ℓw ↦ → ⟨v⊥⟩m]
-    let r = s.heap.allocate(value.clone(), lifetime as usize);
+    let r = s.store.allocate(value.clone(), lifetime as usize);
     (s, r)
 }
 
@@ -234,13 +234,13 @@ pub fn bind(mut s: State, variable: &String, reference: Reference) -> State {
 
 pub fn drop(mut s: State, value: &Value) -> Result<State, String> {
     // S [ℓw ↦ → ⟨·⟩m]
-    s.heap.drop(value)?;
+    s.store.drop(value)?;
     Ok(s)
 }
 
 pub fn drop_lifetime(mut s: State, lifetime: usize) -> State {
     // S [ℓw ↦ → ⟨·⟩m]
     s.stack.remove(lifetime);
-    s.heap.drop_lifetime(lifetime);
+    s.store.drop_lifetime(lifetime);
     s
 }

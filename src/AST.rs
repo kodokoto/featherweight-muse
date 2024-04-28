@@ -3,6 +3,7 @@ use std::fmt::Display;
 use crate::{reduction::Evaluate, typecheck::TypeCheck, typing::Type};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+
 pub struct Reference {
     pub location: String,
     pub path: Vec<usize>,

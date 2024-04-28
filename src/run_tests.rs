@@ -92,6 +92,11 @@ mod tests {
             ("y", " 0"),
         ])),
 
+        boxed_variable: ("tests/good/boxed_variable.mu", Ok(vec![
+            ("x", " 0"),
+            ("y", "ref 0"),
+        ])),
+
         // bad
 
         double_mut_ref: ("tests/bad/double_mut_ref.mu", Err(TypeError::MutrefAlreadyBorrowedImmut("x".to_string()).to_string())),

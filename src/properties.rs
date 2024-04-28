@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::{
-    ast::{Reference, Term, Value},
+    ast::{LVal, Reference, Term, Value},
     reduction::Evaluate,
     state::State,
     typecheck::TypeCheck,
@@ -104,13 +104,13 @@ pub fn safe_abstraction(s: State, g: TypeEnviroment) -> Result<bool, String> {
         let l = &s.locate(x.clone())?;
         if !valid_type(
             &s,
-            &s.heap.get(l.clone()).unwrap().value,
+            &s.store.get(l.clone()).unwrap().value,
             g.get_partial(&x)?.value,
         )? {
             println!("Invalid type");
             println!(
                 "{:?} {:?}",
-                s.heap.get(l.clone()).unwrap().value,
+                s.store.get(l.clone()).unwrap().value,
                 g.get_partial(&x)?.value
             );
             // panic!();
@@ -122,7 +122,7 @@ pub fn safe_abstraction(s: State, g: TypeEnviroment) -> Result<bool, String> {
 
 pub fn valid_store(s: State) -> Result<bool, String> {
     let mut set = HashSet::new();
-    for value in s.heap.cells.values() {
+    for value in s.store.cells.values() {
         if set.contains(&value.value) {
             return Ok(false); // Duplicate value found
         }
@@ -162,7 +162,7 @@ pub fn valid_state(s: State, t: Term) -> Result<bool, String> {
     }
     let mut set = HashSet::new();
     set = get_values(t, set);
-    for value in s.heap.cells.values() {
+    for value in s.store.cells.values() {
         if set.contains(&value.value) {
             return Ok(false);
         }
@@ -173,11 +173,14 @@ pub fn valid_state(s: State, t: Term) -> Result<bool, String> {
 
 pub fn well_formed(g: TypeEnviroment) -> Result<bool, String> {
     for x in g.dom() {
-        let Slot { value: t, lifetime } = g.get_partial(&x)?;
-        if let Some(mut var) = contains(t) {
-            match var.type_check(g.clone(), lifetime) {
-                Ok(_) => {}
-                Err(_) => return Ok(false),
+        for y in g.dom() {
+            if x == y {
+                continue;
+            }
+            let Slot { value: t1, lifetime: l1 } = g.get_partial(&x)?;
+            let lv =  LVal::Variable { name: y.clone(), copyable: None };
+            if contains(t1.clone(), Type::Reference { var: lv.clone(), mutable: true }) || contains(t1.clone(), Type::Reference { var: lv.clone(), mutable: false }) {
+                lv.clone().type_check(g.clone(), l1)?;
             }
         }
     }
@@ -191,7 +194,7 @@ pub fn valid_type(s: &State, v: &Value, t: Type) -> Result<bool, String> {
         (Value::Epsilon, Type::Epsilon) => return Ok(true),
         (Value::NumericLiteral(_), Type::Numeric) => return Ok(true),
         (Value::Reference(r @ Reference { owned: true, .. }), Type::Box(bt)) => {
-            let vt = &s.heap.get(r.clone()).unwrap().value;
+            let vt = &s.store.get(r.clone()).unwrap().value;
             return valid_type(s, &vt, *bt);
         }
         (Value::Reference(r @ Reference { owned: false, .. }), Type::Reference { var, .. }) => {
