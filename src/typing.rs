@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use crate::{ast::{LVal, Reference}, constants::TypeError};
+use crate::{
+    ast::{LVal, Reference},
+    constants::TypeError,
+};
 
 #[derive(Debug, Clone)]
 pub struct Slot<T> {
@@ -167,7 +170,7 @@ pub fn root(gamma: &TypeEnviroment, lval: LVal) -> Result<LVal, String> {
         LVal::Deref { var } => {
             // check if the variable is in the type environment
             if gamma.gamma.contains_key(&var.get_name()) {
-                return Ok(root(gamma,*var)?);
+                return Ok(root(gamma, *var)?);
             } else {
                 return Err(format!(
                     "Variable {:?} not found in type environment",
@@ -184,20 +187,29 @@ pub fn write_prohibited(gamma: &TypeEnviroment, variable: LVal) -> bool {
     let v2 = root(gamma, variable.clone()).unwrap();
 
     for (_, Slot { value: t, .. }) in gamma.gamma.iter() {
-        if contains(t.clone(), Type::Reference { var: v2.clone(), mutable: false }) || contains(t.clone(), Type::Reference { var: v2.clone(), mutable: true }) {
+        if contains(
+            t.clone(),
+            Type::Reference {
+                var: v2.clone(),
+                mutable: false,
+            },
+        ) || contains(
+            t.clone(),
+            Type::Reference {
+                var: v2.clone(),
+                mutable: true,
+            },
+        ) {
             return true;
         }
     }
     return false;
 }
 
-
 pub fn contains(t: Type, t2: Type) -> bool {
     match t {
-        Type::Box(t1) => {
-            contains(*t1, t2)
-        },
-        _ => t == t2
+        Type::Box(t1) => contains(*t1, t2),
+        _ => t == t2,
     }
 }
 
@@ -205,7 +217,13 @@ pub fn read_prohibited(gamma: &TypeEnviroment, variable: LVal) -> bool {
     // for each type in the type environment
     let v2 = root(gamma, variable.clone()).unwrap();
     for (_, Slot { value: t, .. }) in gamma.gamma.iter() {
-        if contains(t.clone(), Type::Reference { var: v2.clone(), mutable: true }) {
+        if contains(
+            t.clone(),
+            Type::Reference {
+                var: v2.clone(),
+                mutable: true,
+            },
+        ) {
             return true;
         }
     }
@@ -267,9 +285,7 @@ pub fn _mut(gamma: &TypeEnviroment, variable: LVal) -> bool {
                 return false;
             }
         }
-        (LVal::Variable { name, copyable }, Type::Reference { mutable: false, .. }) => {
-            false
-        }
+        (LVal::Variable { name, copyable }, Type::Reference { mutable: false, .. }) => false,
         _ => true,
     }
 }
@@ -316,5 +332,3 @@ pub fn write(gamma: TypeEnviroment, variable: LVal, t1: Type) -> Result<TypeEnvi
     gamma2.insert(variable.get_name(), t3, l);
     return Ok(gamma2);
 }
-
-

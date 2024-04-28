@@ -177,9 +177,27 @@ pub fn well_formed(g: TypeEnviroment) -> Result<bool, String> {
             if x == y {
                 continue;
             }
-            let Slot { value: t1, lifetime: l1 } = g.get_partial(&x)?;
-            let lv =  LVal::Variable { name: y.clone(), copyable: None };
-            if contains(t1.clone(), Type::Reference { var: lv.clone(), mutable: true }) || contains(t1.clone(), Type::Reference { var: lv.clone(), mutable: false }) {
+            let Slot {
+                value: t1,
+                lifetime: l1,
+            } = g.get_partial(&x)?;
+            let lv = LVal::Variable {
+                name: y.clone(),
+                copyable: None,
+            };
+            if contains(
+                t1.clone(),
+                Type::Reference {
+                    var: lv.clone(),
+                    mutable: true,
+                },
+            ) || contains(
+                t1.clone(),
+                Type::Reference {
+                    var: lv.clone(),
+                    mutable: false,
+                },
+            ) {
                 lv.clone().type_check(g.clone(), l1)?;
             }
         }
@@ -207,4 +225,3 @@ pub fn valid_type(s: &State, v: &Value, t: Type) -> Result<bool, String> {
         _ => return Ok(false),
     }
 }
-
