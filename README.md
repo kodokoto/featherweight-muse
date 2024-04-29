@@ -44,6 +44,7 @@ Options:
 ```
 
 ### Test
+To run all tests:
 ```bash
 cargo test
 ```
