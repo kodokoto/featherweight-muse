@@ -2,7 +2,7 @@
 
 An implementation of a featherweight muse interpreter written in Rust.
 
-Featherweight muse is a simple language that is a subset of muse. It is designed to test the type system and the evaluation of muse, including compile-time memory management through borrow checking and local type inference.
+Featherweight muse is a simple language that acts as a subset of muse, a programming language that I'm working on. It is designed to test and evaluate the type system of muse, which implements compile-time memory management through borrow checking. The formalisation of featherweight muse can be seen in [this paper](https://github.com/kodokoto/featherweight-muse/blob/master/docs/final_report.pdf).
 
 Currently, featherweight muse supports the following:
 - [x] Variable declarations
@@ -15,7 +15,6 @@ Currently, featherweight muse supports the following:
 - [x] Ownership system
 - [x] Lifetime system
 - [x] Auto-dereferencing
-- [ ] Local type inference
 
 ## Getting Started
 
