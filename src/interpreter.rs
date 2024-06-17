@@ -30,15 +30,15 @@ impl Interpreter {
     pub fn run(&mut self, mut ast: Program) -> Result<Value, String> {
         // initial type check
         ast.type_check(self.typing_enviroment.clone(), 0)?;
-
+ 
         for mut term in ast.terms {
+            // assert properties
             assert_progess(
                 self.program_state.clone(),
                 term.clone(),
                 self.typing_enviroment.clone(),
                 0,
             )?;
-
             assert_preservation(
                 self.program_state.clone(),
                 term.clone(),
@@ -46,8 +46,10 @@ impl Interpreter {
                 0,
             )?;
 
+            // evaluate the term
             let (s, _) = term.evaluate(self.program_state.clone(), 0)?;
 
+            // type check the term
             let (gamma2, _) = term.type_check(self.typing_enviroment.clone(), 0)?;
 
             self.typing_enviroment = gamma2;
