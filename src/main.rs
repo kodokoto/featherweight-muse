@@ -21,10 +21,6 @@ fn main() {
     // take first arg as file dir
     let args: Vec<String> = std::env::args().collect();
 
-    if args.len() < 2 {
-        panic!("No file provided");
-    }
-
     if args[1] == "-h" || args[1] == "--help" {
         println!("Usage: ./main [options] <file>");
         println!("Options:");
@@ -56,44 +52,48 @@ fn main() {
 
     // get file contents
     let file_dir = &args[args.len() - 1];
-    let file_contents = std::fs::read_to_string(file_dir).expect("Error reading file");
-
-    // tokenize
-    let mut lexer = lexer::Lexer::new(&file_contents);
-    let tokens = lexer.tokenize();
-    if env::var("LEX_OUT").is_ok() {
-        println!("{:?}", tokens);
-    }
-
-    // parse
-    let mut parser = parser::Parser::new(tokens);
-    let mut ast = parser.parse();
-
-    if env::var("PARSE_OUT").is_ok() {
-        println!("{:#?}", ast);
-    }
-
-    // interpret
-    let mut interpreter = interpreter::Interpreter::new();
-    match ast.type_check(TypeEnviroment::new(), 0) {
-        Ok(_) => {}
-        Err(e) => {
-            println!("TYPE ERROR: {}", e);
-            return;
+    if let Ok(file_contents) = std::fs::read_to_string(file_dir) {
+        // tokenize
+        let mut lexer = lexer::Lexer::new(&file_contents);
+        let tokens = lexer.tokenize();
+        if env::var("LEX_OUT").is_ok() {
+            println!("{:?}", tokens);
         }
-    };
 
-    // return;s
-    let res = interpreter.run(ast);
+        // parse
+        let mut parser = parser::Parser::new(tokens);
+        let mut ast = parser.parse();
 
-    // print result
-    match res {
-        Ok(v) => match v {
-            ast::Value::Epsilon => {}
-            _ => println!("{:?}", v),
-        },
-        Err(e) => {
-            println!("ERROR: {}", e);
+        if env::var("PARSE_OUT").is_ok() {
+            println!("{:#?}", ast);
         }
+
+        // interpret
+        let mut interpreter = interpreter::Interpreter::new();
+        match ast.type_check(TypeEnviroment::new(), 0) {
+            Ok(_) => {}
+            Err(e) => {
+                println!("TYPE ERROR: {}", e);
+                return;
+            }
+        };
+
+        // return;s
+        let res = interpreter.run(ast);
+
+        // print result
+        match res {
+            Ok(v) => match v {
+                ast::Value::Epsilon => {}
+                _ => println!("{:?}", v),
+            },
+            Err(e) => {
+                println!("ERROR: {}", e);
+            }
+        }
+    } else {
+        println!("No file provided")
     }
+
+    
 }
