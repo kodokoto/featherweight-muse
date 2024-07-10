@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    ast::{LVal, Reference},
+    ast::LVal,
     constants::TypeError,
 };
 
@@ -285,7 +285,7 @@ pub fn _mut(gamma: &TypeEnviroment, variable: LVal) -> bool {
                 return false;
             }
         }
-        (LVal::Variable { name, copyable }, Type::Reference { mutable: false, .. }) => false,
+        (LVal::Variable { .. }, Type::Reference { mutable: false, .. }) => false,
         _ => true,
     }
 }
