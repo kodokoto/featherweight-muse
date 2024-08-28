@@ -2,7 +2,7 @@
 
 An implementation of a featherweight muse interpreter written in Rust.
 
-Featherweight muse is a simple language that acts as a subset of muse, a programming language that I'm working on. It is designed to test and evaluate the type system of muse, which implements compile-time memory management through borrow checking. The formalisation of featherweight muse can be seen in [this paper](https://github.com/kodokoto/featherweight-muse/blob/master/docs/final_report.pdf).
+Featherweight muse is a subset of muse, a programming language that I'm working on. It is designed to test and evaluate the type system of muse, which implements compile-time memory management through borrow checking. The formalisation of featherweight muse can be seen in [this paper](https://github.com/kodokoto/featherweight-muse/blob/master/docs/final_report.pdf).
 
 Currently, featherweight muse supports the following:
 - [x] Variable declarations
